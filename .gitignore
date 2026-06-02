@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+.npm
+npm-debug.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Expo
+.expo/
+.expo-shared/
+dist/
+build/
+
+# Mobile app-specific
+*.jks
+*.p12
+*.p8
+*.mobileprovision
+*.ipa
+*.zip
+*.apk
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Cache
+.cache/
+.eslintcache
+
+# Build
+dist/
+build/
+
+# Test coverage
+coverage/
+
+# Security
+*.pem
+*.key

@@ -1,0 +1,97 @@
+export interface Usuario {
+  id: string;
+  nombre: string;
+  email: string;
+  rol: 'turista' | 'negocio' | 'admin';
+  foto_url?: string;
+}
+
+export interface Lugar {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  historia?: string;
+  latitud: number;
+  longitud: number;
+  direccion?: string;
+  provincia?: string;
+  audio_url?: string;
+  activo?: boolean;
+  categoria: {
+    id: number;
+    nombre: string;
+    icono: string;
+  };
+  imagenes: {
+    id?: number;
+    url: string;
+    es_portada: boolean;
+    orden?: number;
+  }[];
+  calificacion_promedio?: number;
+  total_resenas?: number;
+  distancia_metros?: number;
+  resenas?: Resena[];
+}
+
+export interface Negocio {
+  id: string;
+  nombre: string;
+  descripcion?: string;
+  latitud: number;
+  longitud: number;
+  direccion?: string;
+  telefono?: string;
+  whatsapp?: string;
+  horario?: string;
+  sitio_web?: string;
+  verificado?: boolean;
+  activo?: boolean;
+  categoria: {
+    id: number;
+    nombre: string;
+    icono?: string;
+  };
+  distancia_metros?: number;
+  propietario_id?: string;
+}
+
+export interface Resena {
+  id: number;
+  calificacion: number;
+  comentario?: string;
+  creado_en: string;
+  usuario: {
+    id: string;
+    nombre: string;
+    foto_url?: string;
+  };
+}
+
+export interface Coordenadas {
+  latitude: number;
+  longitude: number;
+}
+
+export interface AuthResponse {
+  token: string;
+  usuario: Usuario;
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  message?: string;
+}
+
+export interface CategoriaLugar {
+  id: number;
+  nombre: string;
+  icono: string;
+}
+
+export interface CategoriaNegocio {
+  id: number;
+  nombre: string;
+  icono: string;
+}
