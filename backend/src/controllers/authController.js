@@ -113,7 +113,28 @@ async function login(req, res, next) {
   }
 }
 
+// Obtener perfil del usuario autenticado
+async function me(req, res, next) {
+  try {
+    const usuario = await Usuario.findByPk(req.user.id, {
+      attributes: ['id', 'nombre', 'email', 'foto_url', 'creado_en'],
+    });
+
+    if (!usuario) {
+      return error(res, 'Usuario no encontrado', 404);
+    }
+
+    return success(res, {
+      ...usuario.toJSON(),
+      rol: req.user.rol,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   register,
   login,
+  me,
 };

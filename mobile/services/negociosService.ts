@@ -13,7 +13,6 @@ class NegociosService {
       });
       return response.data.data || [];
     } catch (error: any) {
-      console.error('Error al obtener negocios cercanos:', error);
       throw error;
     }
   }
@@ -26,7 +25,6 @@ class NegociosService {
       }
       return response.data.data;
     } catch (error: any) {
-      console.error('Error al obtener negocio:', error);
       throw error;
     }
   }
