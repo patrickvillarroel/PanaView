@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./src/config/swagger');
 const authRoutes = require('./src/routes/authRoutes');
 const lugaresRoutes = require('./src/routes/lugaresRoutes');
 const negociosRoutes = require('./src/routes/negociosRoutes');
@@ -25,6 +27,26 @@ const authLimiter = rateLimit({
 });
 
 app.use('/api/auth/', authLimiter);
+
+// Swagger UI — disponible solo fuera de producción
+if (process.env.NODE_ENV !== 'production') {
+  app.use(
+    '/api/docs',
+    swaggerUi.serve,
+    swaggerUi.setup(swaggerSpec, {
+      customSiteTitle: 'PanaView API Docs',
+      swaggerOptions: {
+        persistAuthorization: true, // mantiene el token al recargar
+      },
+    })
+  );
+  // Endpoint para descargar el JSON de la especificación
+  app.get('/api/docs.json', (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(swaggerSpec);
+  });
+  console.log('📋 Swagger UI disponible en: http://localhost:3000/api/docs');
+}
 
 // Rutas
 app.use('/api/auth', authRoutes);

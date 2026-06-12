@@ -1,15 +1,71 @@
 import React from 'react';
 import {
   View,
-  StyleSheet,
-  TouchableOpacity,
   Text,
   ScrollView,
+  TouchableOpacity,
+  Image,
+  StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORES, ESPACIADO, TAMAÑOS, BORDES } from '../../constants/config';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useAuth } from '../../context/AuthContext';
+import { COLORES } from '../../constants/config';
+
+// ─── Datos placeholder ───────────────────────────────────────────────────────
+
+const INTERESES = ['Historia', 'Gastronomía', 'Naturaleza', 'Arquitectura'];
+
+const LUGARES_GUARDADOS = [
+  {
+    id: '1',
+    nombre: 'Casco Viejo',
+    categoria: 'Distrito Histórico',
+    colores: ['#E8A838', '#C97B1A'] as [string, string],
+  },
+  {
+    id: '2',
+    nombre: 'Esclusas de Miraflores',
+    categoria: 'Canal de Panamá',
+    colores: ['#2196F3', '#1565C0'] as [string, string],
+  },
+];
+
+const ETIQUETAS_ROL: Record<string, string[]> = {
+  turista:  ['Explorador local', 'Viajero'],
+  negocio:  ['Propietario', 'Negocio local'],
+  admin:    ['Administrador'],
+};
+
+const MENU_OPCIONES = [
+  { icono: 'settings-outline'      as const, label: 'Configuración de cuenta' },
+  { icono: 'notifications-outline' as const, label: 'Notificaciones' },
+  { icono: 'shield-checkmark-outline' as const, label: 'Privacidad y seguridad' },
+];
+
+// ─── Pantalla sin sesión ─────────────────────────────────────────────────────
+
+function SinSesion() {
+  const router = useRouter();
+  return (
+    <View style={styles.sinSesionContenedor}>
+      <Ionicons name="person-circle-outline" size={88} color={COLORES.acento} />
+      <Text style={styles.sinSesionTitulo}>Inicia sesión</Text>
+      <Text style={styles.sinSesionTexto}>
+        Crea una cuenta o inicia sesión para acceder a tu perfil
+      </Text>
+      <TouchableOpacity style={styles.botonPrimario} onPress={() => router.push('/login')}>
+        <Text style={styles.botonPrimarioTexto}>Iniciar sesión</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.botonSecundario} onPress={() => router.push('/register')}>
+        <Text style={styles.botonSecundarioTexto}>Crear cuenta</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// ─── Pantalla principal ──────────────────────────────────────────────────────
 
 export default function PerfilScreen() {
   const { usuario, isAuthenticated, logout } = useAuth();
@@ -20,269 +76,379 @@ export default function PerfilScreen() {
     router.replace('/login');
   };
 
-  if (!isAuthenticated) {
-    return (
-      <ScrollView style={styles.contenedor} contentContainerStyle={styles.contenedorVacio}>
-        <View style={styles.centrado}>
-          <Ionicons name="person-circle" size={80} color={COLORES.primario} />
-          <Text style={styles.tituloVacio}>Inicia sesión</Text>
-          <Text style={styles.textoVacio}>
-            Crea una cuenta o inicia sesión para acceder a tu perfil
-          </Text>
+  if (!isAuthenticated) return <SinSesion />;
 
-          <TouchableOpacity
-            style={styles.botonPrimario}
-            onPress={() => router.push('/login')}
-          >
-            <Text style={styles.botonTexto}>Iniciar Sesión</Text>
-          </TouchableOpacity>
+  const iniciales = usuario?.nombre
+    ? usuario.nombre.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()
+    : '?';
 
-          <TouchableOpacity
-            style={styles.botonSecundario}
-            onPress={() => router.push('/register')}
-          >
-            <Text style={styles.botonSecundarioTexto}>Crear Cuenta</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    );
-  }
+  const etiquetas = ETIQUETAS_ROL[usuario?.rol ?? 'turista'] ?? [];
 
   return (
-    <ScrollView style={styles.contenedor}>
-      <View style={styles.headerPerfil}>
-        <View style={styles.avatarContainer}>
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContenido} showsVerticalScrollIndicator={false}>
+
+      {/* ── Hero / Datos del usuario ─────────────────────────────── */}
+      <View style={styles.hero}>
+        {/* Avatar */}
+        <View style={styles.avatarWrap}>
           {usuario?.foto_url ? (
-            <Ionicons
-              name="person-circle"
-              size={80}
-              color={COLORES.primario}
-            />
+            <Image source={{ uri: usuario.foto_url }} style={styles.avatarImg} />
           ) : (
-            <View style={styles.avatar}>
-              <Text style={styles.letraInicial}>
-                {usuario?.nombre.charAt(0).toUpperCase()}
-              </Text>
-            </View>
+            <LinearGradient
+              colors={[COLORES.secundario, COLORES.primario]}
+              style={styles.avatarGradiente}
+            >
+              <Text style={styles.avatarIniciales}>{iniciales}</Text>
+            </LinearGradient>
           )}
         </View>
-        <Text style={styles.nombreUsuario}>{usuario?.nombre}</Text>
-        <Text style={styles.emailUsuario}>{usuario?.email}</Text>
-        <View style={styles.badgeRol}>
-          <Text style={styles.rolTexto}>{usuario?.rol}</Text>
+
+        {/* Nombre */}
+        <Text style={styles.heroNombre}>{usuario?.nombre ?? 'Usuario'}</Text>
+
+        {/* Ubicación */}
+        <View style={styles.heroUbicacion}>
+          <Ionicons name="location-sharp" size={13} color={COLORES.secundario} />
+          <Text style={styles.heroUbicacionTexto}>Con base en Ciudad de Panamá</Text>
         </View>
-      </View>
 
-      <View style={styles.seccion}>
-        <Text style={styles.tituloSeccion}>Opciones</Text>
+        {/* Chips de rol */}
+        <View style={styles.chipsWrap}>
+          {etiquetas.map((tag) => (
+            <View key={tag} style={styles.chip}>
+              <Text style={styles.chipTexto}>{tag}</Text>
+            </View>
+          ))}
+        </View>
 
-        <TouchableOpacity style={styles.opcion}>
-          <View style={styles.opcionIcono}>
-            <Ionicons name="heart" size={20} color={COLORES.primario} />
-          </View>
-          <Text style={styles.opcionTexto}>Lugares Favoritos</Text>
-          <Ionicons name="chevron-forward" size={20} color={COLORES.textoBorrado} />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.opcion}>
-          <View style={styles.opcionIcono}>
-            <Ionicons name="location-outline" size={20} color={COLORES.primario} />
-          </View>
-          <Text style={styles.opcionTexto}>Historial de Visitas</Text>
-          <Ionicons name="chevron-forward" size={20} color={COLORES.textoBorrado} />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.opcion}>
-          <View style={styles.opcionIcono}>
-            <Ionicons name="star-outline" size={20} color={COLORES.primario} />
-          </View>
-          <Text style={styles.opcionTexto}>Mis Reseñas</Text>
-          <Ionicons name="chevron-forward" size={20} color={COLORES.textoBorrado} />
+        {/* Botón editar */}
+        <TouchableOpacity style={styles.botonEditar} activeOpacity={0.8}>
+          <Text style={styles.botonEditarTexto}>Editar perfil</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.seccion}>
-        <Text style={styles.tituloSeccion}>Configuración</Text>
-
-        <TouchableOpacity style={styles.opcion}>
-          <View style={styles.opcionIcono}>
-            <Ionicons name="settings-outline" size={20} color={COLORES.primario} />
-          </View>
-          <Text style={styles.opcionTexto}>Preferencias</Text>
-          <Ionicons name="chevron-forward" size={20} color={COLORES.textoBorrado} />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.opcion}>
-          <View style={styles.opcionIcono}>
-            <Ionicons name="help-circle-outline" size={20} color={COLORES.primario} />
-          </View>
-          <Text style={styles.opcionTexto}>Ayuda y Soporte</Text>
-          <Ionicons name="chevron-forward" size={20} color={COLORES.textoBorrado} />
+      {/* ── Preferencias de viaje ────────────────────────────────── */}
+      <View style={styles.tarjeta}>
+        <View style={styles.tarjetaHeader}>
+          <Ionicons name="options-outline" size={18} color={COLORES.primario} />
+          <Text style={styles.tarjetaTitulo}>Preferencias de viaje</Text>
+        </View>
+        <View style={styles.interesesWrap}>
+          {INTERESES.map((interes) => (
+            <View key={interes} style={styles.chipInteres}>
+              <Text style={styles.chipInteresTexto}>{interes}</Text>
+            </View>
+          ))}
+        </View>
+        <TouchableOpacity style={styles.agregarIntereses}>
+          <Ionicons name="add-circle-outline" size={16} color={COLORES.secundario} />
+          <Text style={styles.agregarInteresesTexto}>Agregar intereses</Text>
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity
-        style={styles.botonCerrarSesion}
-        onPress={handleLogout}
-      >
-        <Ionicons name="log-out-outline" size={20} color={COLORES.error} />
-        <Text style={styles.botonCerrarSesionTexto}>Cerrar Sesión</Text>
+      {/* ── Menú de configuración ────────────────────────────────── */}
+      <View style={styles.tarjeta}>
+        {MENU_OPCIONES.map((opcion, i) => (
+          <React.Fragment key={opcion.label}>
+            <TouchableOpacity style={styles.menuFila} activeOpacity={0.7}>
+              <View style={styles.menuIconoWrap}>
+                <Ionicons name={opcion.icono} size={20} color={COLORES.primario} />
+              </View>
+              <Text style={styles.menuLabel}>{opcion.label}</Text>
+              <Ionicons name="chevron-forward" size={18} color="#C4C9D4" />
+            </TouchableOpacity>
+            {i < MENU_OPCIONES.length - 1 && <View style={styles.separador} />}
+          </React.Fragment>
+        ))}
+      </View>
+
+      {/* Cerrar sesión */}
+      <TouchableOpacity style={styles.cerrarSesionFila} onPress={handleLogout} activeOpacity={0.7}>
+        <Ionicons name="log-out-outline" size={20} color="#E53935" />
+        <Text style={styles.cerrarSesionTexto}>Cerrar sesión</Text>
       </TouchableOpacity>
 
-      <View style={{ height: ESPACIADO.xl }} />
+      {/* ── Lugares Guardados ────────────────────────────────────── */}
+      <View style={styles.seccionGuardados}>
+        <View style={styles.seccionHeader}>
+          <View style={styles.seccionHeaderIzq}>
+            <Ionicons name="bookmark-outline" size={18} color={COLORES.primario} />
+            <Text style={styles.seccionTitulo}>Lugares Guardados</Text>
+          </View>
+          <TouchableOpacity>
+            <Text style={styles.verTodo}>Ver todos</Text>
+          </TouchableOpacity>
+        </View>
+
+        {LUGARES_GUARDADOS.map((lugar) => (
+          <TouchableOpacity key={lugar.id} style={styles.cardLugar} activeOpacity={0.85}>
+            <LinearGradient colors={lugar.colores} style={styles.cardImagen}>
+              <TouchableOpacity style={styles.cardCorazon}>
+                <Ionicons name="heart" size={16} color="#fff" />
+              </TouchableOpacity>
+            </LinearGradient>
+            <View style={styles.cardInfo}>
+              <Text style={styles.cardNombre}>{lugar.nombre}</Text>
+              <View style={styles.cardCategoria}>
+                <Ionicons name="location-outline" size={12} color={COLORES.textoBorrado} />
+                <Text style={styles.cardCategoriaTexto}>{lugar.categoria}</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <View style={{ height: 32 }} />
     </ScrollView>
   );
 }
 
+// ─── Estilos ─────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  contenedor: {
+  // Scroll
+  scroll: { flex: 1, backgroundColor: '#F4F6FB' },
+  scrollContenido: { paddingBottom: 16 },
+
+  // ── Sin sesión
+  sinSesionContenedor: {
     flex: 1,
     backgroundColor: COLORES.fondo,
-  },
-  contenedorVacio: {
-    flexGrow: 1,
-    justifyContent: 'center',
-  },
-  centrado: {
-    alignItems: 'center',
-    paddingHorizontal: ESPACIADO.lg,
-  },
-  headerPerfil: {
-    backgroundColor: COLORES.primario,
-    paddingVertical: ESPACIADO.xxl,
-    paddingHorizontal: ESPACIADO.lg,
-    alignItems: 'center',
-  },
-  avatarContainer: {
-    marginBottom: ESPACIADO.lg,
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: COLORES.secundario,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  letraInicial: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: COLORES.fondo,
-  },
-  nombreUsuario: {
-    fontSize: TAMAÑOS.fontoPequenioGrande,
-    fontWeight: '700',
-    color: COLORES.fondo,
-    marginBottom: ESPACIADO.xs,
-  },
-  emailUsuario: {
-    fontSize: TAMAÑOS.fontoPequeno,
-    color: COLORES.acento,
-    marginBottom: ESPACIADO.md,
-  },
-  badgeRol: {
-    backgroundColor: COLORES.secundario,
-    paddingVertical: ESPACIADO.xs,
-    paddingHorizontal: ESPACIADO.md,
-    borderRadius: BORDES.circulo,
-  },
-  rolTexto: {
-    color: COLORES.fondo,
-    fontSize: TAMAÑOS.fontoPequeno,
-    fontWeight: '600',
-    textTransform: 'capitalize',
-  },
-  seccion: {
-    paddingHorizontal: ESPACIADO.lg,
-    paddingTop: ESPACIADO.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORES.acento,
-  },
-  tituloSeccion: {
-    fontSize: TAMAÑOS.fontoMedio,
-    fontWeight: '700',
-    color: COLORES.texto,
-    marginBottom: ESPACIADO.md,
-  },
-  opcion: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: ESPACIADO.md,
-    paddingHorizontal: ESPACIADO.md,
-    marginBottom: ESPACIADO.sm,
-    backgroundColor: COLORES.fondoGris,
-    borderRadius: BORDES.redondeado,
-    gap: ESPACIADO.md,
-  },
-  opcionIcono: {
-    width: 40,
-    height: 40,
-    borderRadius: BORDES.redondeado,
-    backgroundColor: COLORES.acento,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  opcionTexto: {
-    flex: 1,
-    fontSize: TAMAÑOS.fontoNormal,
-    fontWeight: '500',
-    color: COLORES.texto,
-  },
-  botonCerrarSesion: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: ESPACIADO.lg,
-    marginVertical: ESPACIADO.lg,
-    paddingVertical: ESPACIADO.md,
-    paddingHorizontal: ESPACIADO.lg,
-    borderRadius: BORDES.redondeado,
-    borderWidth: 2,
-    borderColor: COLORES.error,
-    gap: ESPACIADO.md,
+    paddingHorizontal: 32,
+    gap: 12,
   },
-  botonCerrarSesionTexto: {
-    fontSize: TAMAÑOS.fontoMedio,
-    fontWeight: '700',
-    color: COLORES.error,
-  },
+  sinSesionTitulo: { fontSize: 22, fontWeight: '800', color: COLORES.texto },
+  sinSesionTexto: { fontSize: 14, color: COLORES.textoBorrado, textAlign: 'center', lineHeight: 20 },
   botonPrimario: {
     backgroundColor: COLORES.primario,
-    paddingVertical: ESPACIADO.md,
-    paddingHorizontal: ESPACIADO.xl,
-    borderRadius: BORDES.redondeado,
-    marginVertical: ESPACIADO.lg,
+    paddingVertical: 13,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 8,
   },
+  botonPrimarioTexto: { color: '#fff', fontSize: 15, fontWeight: '700' },
   botonSecundario: {
     borderWidth: 2,
     borderColor: COLORES.primario,
-    paddingVertical: ESPACIADO.md,
-    paddingHorizontal: ESPACIADO.xl,
-    borderRadius: BORDES.redondeado,
-    marginVertical: ESPACIADO.sm,
+    paddingVertical: 13,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    width: '100%',
+    alignItems: 'center',
   },
-  botonTexto: {
-    color: COLORES.fondo,
-    fontSize: TAMAÑOS.fontoMedio,
-    fontWeight: '700',
-    textAlign: 'center',
+  botonSecundarioTexto: { color: COLORES.primario, fontSize: 15, fontWeight: '700' },
+
+  // ── Hero
+  hero: {
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    paddingTop: 32,
+    paddingBottom: 24,
+    paddingHorizontal: 24,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  botonSecundarioTexto: {
-    color: COLORES.primario,
-    fontSize: TAMAÑOS.fontoMedio,
-    fontWeight: '700',
-    textAlign: 'center',
+  avatarWrap: {
+    marginBottom: 14,
+    shadowColor: COLORES.primario,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  tituloVacio: {
-    fontSize: TAMAÑOS.fontoPequenioGrande,
-    fontWeight: '700',
-    color: COLORES.texto,
-    marginVertical: ESPACIADO.lg,
+  avatarImg: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 3,
+    borderColor: '#fff',
   },
-  textoVacio: {
-    fontSize: TAMAÑOS.fontoNormal,
-    color: COLORES.textoBorrado,
-    textAlign: 'center',
-    marginVertical: ESPACIADO.lg,
+  avatarGradiente: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#fff',
   },
+  avatarIniciales: { color: '#fff', fontSize: 34, fontWeight: '800' },
+
+  heroNombre: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#1A1F36',
+    marginBottom: 6,
+  },
+  heroUbicacion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 12,
+  },
+  heroUbicacionTexto: {
+    fontSize: 13,
+    color: COLORES.secundario,
+    fontWeight: '500',
+  },
+  chipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 18,
+  },
+  chip: {
+    backgroundColor: '#EEF2F7',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  chipTexto: { fontSize: 12, color: '#5F6B7C', fontWeight: '600' },
+
+  botonEditar: {
+    backgroundColor: COLORES.primario,
+    paddingVertical: 11,
+    paddingHorizontal: 36,
+    borderRadius: 12,
+  },
+  botonEditarTexto: { color: '#fff', fontSize: 14, fontWeight: '700' },
+
+  // ── Tarjeta genérica
+  tarjeta: {
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  tarjetaHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 14,
+  },
+  tarjetaTitulo: { fontSize: 15, fontWeight: '700', color: '#1A1F36' },
+
+  // Intereses
+  interesesWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  chipInteres: {
+    borderWidth: 1.5,
+    borderColor: COLORES.secundario,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  chipInteresTexto: { fontSize: 12, color: COLORES.secundario, fontWeight: '600' },
+  agregarIntereses: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  agregarInteresesTexto: { fontSize: 13, color: COLORES.secundario, fontWeight: '600' },
+
+  // ── Menú
+  menuFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    gap: 12,
+  },
+  menuIconoWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#EEF2F7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuLabel: { flex: 1, fontSize: 14, fontWeight: '600', color: '#1A1F36' },
+  separador: { height: StyleSheet.hairlineWidth, backgroundColor: '#F0F2F5' },
+
+  // Cerrar sesión
+  cerrarSesionFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cerrarSesionTexto: { fontSize: 14, fontWeight: '700', color: '#E53935' },
+
+  // ── Lugares Guardados
+  seccionGuardados: {
+    marginHorizontal: 16,
+  },
+  seccionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  seccionHeaderIzq: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  seccionTitulo: { fontSize: 15, fontWeight: '700', color: '#1A1F36' },
+  verTodo: { fontSize: 13, color: COLORES.secundario, fontWeight: '600' },
+
+  cardLugar: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  cardImagen: {
+    height: 130,
+    alignItems: 'flex-end',
+    padding: 10,
+  },
+  cardCorazon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardInfo: {
+    padding: 12,
+  },
+  cardNombre: { fontSize: 15, fontWeight: '800', color: '#1A1F36', marginBottom: 4 },
+  cardCategoria: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  cardCategoriaTexto: { fontSize: 12, color: COLORES.textoBorrado },
 });

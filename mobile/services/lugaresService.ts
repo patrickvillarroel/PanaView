@@ -13,7 +13,6 @@ class LugaresService {
       });
       return response.data.data || [];
     } catch (error: any) {
-      console.error('Error al obtener lugares cercanos:', error);
       throw error;
     }
   }
