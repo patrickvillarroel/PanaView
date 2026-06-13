@@ -8,6 +8,7 @@ const authRoutes = require('./src/routes/authRoutes');
 const lugaresRoutes = require('./src/routes/lugaresRoutes');
 const negociosRoutes = require('./src/routes/negociosRoutes');
 const resenasRoutes = require('./src/routes/resenasRoutes');
+const favoritosRoutes = require('./src/routes/favoritosRoutes');
 const errorMiddleware = require('./src/middlewares/errorMiddleware');
 
 const app = express();
@@ -53,6 +54,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/lugares', lugaresRoutes);
 app.use('/api/negocios', negociosRoutes);
 app.use('/api/resenas', resenasRoutes);
+app.use('/api/favoritos', favoritosRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

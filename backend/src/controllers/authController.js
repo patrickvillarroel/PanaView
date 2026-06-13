@@ -1,7 +1,29 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { Usuario } = require('../models');
+const { Usuario, Lugar, CategoriaLugar, ImagenLugar } = require('../models');
 const { success, error } = require('../utils/responseHelper');
+
+function formatearFavorito(lugar) {
+  const data = lugar.toJSON();
+  const imagenPortada = data.imagenes?.find((imagen) => imagen.es_portada)?.url
+    ?? data.imagenes?.[0]?.url
+    ?? null;
+
+  return {
+    id: data.id,
+    nombre: data.nombre,
+    direccion: data.direccion,
+    provincia: data.provincia,
+    categoria: data.categoria
+      ? {
+          id: data.categoria.id,
+          nombre: data.categoria.nombre,
+          icono: data.categoria.icono,
+        }
+      : null,
+    imagen_portada: imagenPortada,
+  };
+}
 
 // Registrar nuevo usuario
 async function register(req, res, next) {
@@ -118,11 +140,77 @@ async function me(req, res, next) {
   try {
     const usuario = await Usuario.findByPk(req.user.id, {
       attributes: ['id', 'nombre', 'email', 'foto_url', 'creado_en'],
+      include: [
+        {
+          model: Lugar,
+          as: 'favoritos',
+          attributes: ['id', 'nombre', 'direccion', 'provincia'],
+          through: { attributes: [] },
+          include: [
+            {
+              model: CategoriaLugar,
+              as: 'categoria',
+              attributes: ['id', 'nombre', 'icono'],
+            },
+            {
+              model: ImagenLugar,
+              as: 'imagenes',
+              attributes: ['url', 'es_portada', 'orden'],
+            },
+          ],
+        },
+      ],
     });
 
     if (!usuario) {
       return error(res, 'Usuario no encontrado', 404);
     }
+
+    const usuarioJson = usuario.toJSON();
+
+    return success(res, {
+      ...usuarioJson,
+      rol: req.user.rol,
+      favoritos: (usuarioJson.favoritos || []).map(formatearFavorito),
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Actualizar perfil del usuario autenticado
+async function updateMe(req, res, next) {
+  try {
+    const { nombre, foto_url: fotoUrlRaw } = req.body;
+
+    const usuario = await Usuario.findByPk(req.user.id, {
+      attributes: ['id', 'nombre', 'email', 'foto_url', 'creado_en'],
+    });
+
+    if (!usuario) {
+      return error(res, 'Usuario no encontrado', 404);
+    }
+
+    if (nombre !== undefined) {
+      const nombreLimpio = String(nombre).trim();
+
+      if (!nombreLimpio) {
+        return error(res, 'El nombre no puede estar vacío', 400);
+      }
+
+      if (nombreLimpio.length < 2 || nombreLimpio.length > 100) {
+        return error(res, 'El nombre debe tener entre 2 y 100 caracteres', 400);
+      }
+
+      usuario.nombre = nombreLimpio;
+    }
+
+    if (fotoUrlRaw !== undefined) {
+      const fotoUrl = typeof fotoUrlRaw === 'string' ? fotoUrlRaw.trim() : fotoUrlRaw;
+      usuario.foto_url = fotoUrl ? fotoUrl : null;
+    }
+
+    await usuario.save();
 
     return success(res, {
       ...usuario.toJSON(),
@@ -137,4 +225,5 @@ module.exports = {
   register,
   login,
   me,
+  updateMe,
 };

@@ -17,6 +17,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Lugar, Resena } from '../../types';
 import lugaresService from '../../services/lugaresService';
+import favoritosService from '../../services/favoritosService';
+import authService from '../../services/authService';
 import resenasService from '../../services/resenasService';
 import { useAuth } from '../../context/AuthContext';
 import { COLORES, ESPACIADO, TAMAÑOS, BORDES } from '../../constants/config';
@@ -76,10 +78,20 @@ export default function LugarDetailScreen() {
   const [comentario, setComentario] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [esFavorito, setEsFavorito] = useState(false);
+  const [cargandoFavorito, setCargandoFavorito] = useState(false);
 
   useEffect(() => {
     obtenerLugar();
   }, [id]);
+
+  useEffect(() => {
+    if (!id || !isAuthenticated) {
+      setEsFavorito(false);
+      return;
+    }
+
+    void cargarEstadoFavorito();
+  }, [id, isAuthenticated]);
 
   const obtenerLugar = async () => {
     if (!id) return;
@@ -92,6 +104,36 @@ export default function LugarDetailScreen() {
       setError(err.message || 'Error al cargar el lugar');
     } finally {
       setCargando(false);
+    }
+  };
+
+  const cargarEstadoFavorito = async () => {
+    try {
+      setCargandoFavorito(true);
+      const perfil = await authService.getMe();
+      const favoritoExiste = perfil.favoritos?.some((favorito) => favorito.id === id) ?? false;
+      setEsFavorito(favoritoExiste);
+    } catch {
+      setEsFavorito(false);
+    } finally {
+      setCargandoFavorito(false);
+    }
+  };
+
+  const handleToggleFavorito = async () => {
+    if (!isAuthenticated || !lugar) {
+      Alert.alert('Inicia sesión', 'Debes iniciar sesión para guardar lugares.');
+      return;
+    }
+
+    try {
+      setGuardando(true);
+      const siguienteEstado = await favoritosService.toggleFavorito(lugar.id);
+      setEsFavorito(siguienteEstado);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'No se pudo actualizar el favorito');
+    } finally {
+      setGuardando(false);
     }
   };
 
@@ -169,7 +211,8 @@ export default function LugarDetailScreen() {
 
           <TouchableOpacity
             style={styles.botonFavorito}
-            onPress={() => setEsFavorito((v) => !v)}
+            onPress={handleToggleFavorito}
+            disabled={guardando || cargandoFavorito}
           >
             <Ionicons
               name={esFavorito ? 'heart' : 'heart-outline'}

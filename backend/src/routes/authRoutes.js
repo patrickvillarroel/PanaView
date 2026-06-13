@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { register, login, me } = require('../controllers/authController');
+const { register, login, me, updateMe } = require('../controllers/authController');
 const authMiddleware = require('../middlewares/authMiddleware');
 
 /**
@@ -99,5 +99,19 @@ router.post('/login', login);
  *         description: Token no proporcionado o inválido
  */
 router.get('/me', authMiddleware, me);
+
+/**
+ * @swagger
+ * /api/auth/me:
+ *   put:
+ *     summary: Actualizar perfil del usuario autenticado
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Perfil actualizado
+ */
+router.put('/me', authMiddleware, updateMe);
 
 module.exports = router;

@@ -78,6 +78,24 @@ export interface AuthResponse {
   usuario: Usuario;
 }
 
+export interface LugarFavoritoResumen {
+  id: string;
+  nombre: string;
+  direccion?: string;
+  provincia?: string;
+  categoria: {
+    id?: number;
+    nombre: string;
+    icono?: string;
+  } | null;
+  imagen_portada?: string | null;
+}
+
+export interface UsuarioPerfil extends Usuario {
+  creado_en?: string;
+  favoritos: LugarFavoritoResumen[];
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;

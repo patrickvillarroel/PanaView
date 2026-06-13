@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 const getApiUrl = (): string => {
   if (Platform.OS === 'android') {
     // Android emulator accede al host mediante 10.0.2.2
-    return 'http://10.0.2.2:3000/api';
+    return 'http://192.168.0.3:3000/api';
   }
   return 'http://localhost:3000/api';
 };

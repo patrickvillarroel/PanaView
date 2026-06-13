@@ -29,20 +29,6 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    // Si es un error de autenticación (401)
-    if (error.response?.status === 401) {
-      try {
-        // Limpiar sesión
-        await AsyncStorage.removeItem('authToken');
-        await AsyncStorage.removeItem('usuario');
-        
-        // Redirigir a login (esto debería hacerse desde la app)
-        console.log('Sesión expirada, redirigiendo a login');
-      } catch (err) {
-        console.error('Error al manejar error 401:', err);
-      }
-    }
-
     // Error de conexión
     if (!error.response) {
       return Promise.reject({
