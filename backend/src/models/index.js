@@ -12,6 +12,7 @@ const Negocio = require('./Negocio');
 const ResenaLugar = require('./ResenaLugar');
 const Favorito = require('./Favorito');
 const HistorialVisita = require('./HistorialVisita');
+const Promocion = require('./Promocion');
 
 // Inicializar modelos
 const role = Role(sequelize, DataTypes);
@@ -24,6 +25,7 @@ const negocio = Negocio(sequelize, DataTypes);
 const resenaLugar = ResenaLugar(sequelize, DataTypes);
 const favorito = Favorito(sequelize, DataTypes);
 const historialVisita = HistorialVisita(sequelize, DataTypes);
+const promocion = Promocion(sequelize, DataTypes);
 
 // Definir asociaciones
 // Role -> Usuario
@@ -62,6 +64,10 @@ lugar.belongsToMany(usuario, { through: favorito, foreignKey: 'lugar_id', otherK
 usuario.belongsToMany(lugar, { through: historialVisita, foreignKey: 'usuario_id', otherKey: 'lugar_id', as: 'visitados' });
 lugar.belongsToMany(usuario, { through: historialVisita, foreignKey: 'lugar_id', otherKey: 'usuario_id', as: 'visitantes' });
 
+// Negocio -> Promocion
+negocio.hasMany(promocion, { foreignKey: 'negocio_id', as: 'promociones' });
+promocion.belongsTo(negocio, { foreignKey: 'negocio_id', as: 'negocio' });
+
 module.exports = {
   sequelize,
   Role: role,
@@ -74,4 +80,5 @@ module.exports = {
   ResenaLugar: resenaLugar,
   Favorito: favorito,
   HistorialVisita: historialVisita,
+  Promocion: promocion,
 };

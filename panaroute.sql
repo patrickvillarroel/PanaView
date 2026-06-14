@@ -208,6 +208,40 @@ CREATE TABLE negocios (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ===================================================================
+-- TABLA: promociones
+-- ===================================================================
+
+CREATE TABLE promociones (
+  id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+  negocio_id CHAR(36) NOT NULL,
+  nombre VARCHAR(200) NOT NULL,
+  descripcion TEXT NULL,
+  precio DECIMAL(10,2) NOT NULL DEFAULT 0.0,
+  fecha_validez DATETIME NULL,
+  qr_codigo VARCHAR(255) UNIQUE NOT NULL,
+  activo TINYINT(1) DEFAULT 1,
+  creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+  actualizado_en DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (negocio_id) REFERENCES negocios(id) ON DELETE CASCADE,
+  INDEX idx_negocio (negocio_id),
+  INDEX idx_activo_prom (activo)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla para registrar compras/redenciones de promociones
+CREATE TABLE compras_promociones (
+  id INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  promocion_id CHAR(36) NOT NULL,
+  usuario_id CHAR(36) NULL,
+  qr_codigo VARCHAR(255) NULL,
+  registrado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+  metodo VARCHAR(50) DEFAULT 'app',
+  FOREIGN KEY (promocion_id) REFERENCES promociones(id) ON DELETE CASCADE,
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+  INDEX idx_promocion (promocion_id),
+  INDEX idx_usuario_compra (usuario_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ===================================================================
 -- TABLA: resenas_lugar
 -- ===================================================================
 

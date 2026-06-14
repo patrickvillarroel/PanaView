@@ -11,9 +11,13 @@ export default function MapaScreen() {
     router.push(`/lugar/${lugarId}`);
   };
 
+  const handleNegocioPress = (negocioId: string) => {
+    router.push(`/negocio/detalleNegocio?id=${negocioId}`);
+  };
+
   return (
     <View style={styles.contenedor}>
-      <MapaWebView onLugarPress={handleMarkerPress} />
+      <MapaWebView onLugarPress={handleMarkerPress} onNegocioPress={handleNegocioPress} />
     </View>
   );
 }

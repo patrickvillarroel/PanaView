@@ -53,6 +53,8 @@ export interface Negocio {
     icono?: string;
   };
   distancia_metros?: number;
+  calificacion_promedio?: number;
+  total_resenas?: number;
   propietario_id?: string;
 }
 
@@ -94,4 +96,16 @@ export interface CategoriaNegocio {
   id: number;
   nombre: string;
   icono: string;
+}
+
+export interface Promocion {
+  id: string;
+  negocio_id: string;
+  nombre: string;
+  descripcion?: string;
+  precio: number;
+  fecha_validez?: string;
+  qr_codigo: string;
+  activo?: boolean;
+  creado_en?: string;
 }

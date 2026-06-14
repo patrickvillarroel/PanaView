@@ -17,6 +17,8 @@ async function startServer() {
     console.log('✓ Modelos sincronizados');
     
     // Iniciar servidor
+    // Exponer instancia de sequelize para controladores que necesiten consultas directas
+    app.set('sequelize', sequelize);
     app.listen(PORT, () => {
       console.log(`\n🚀 Servidor PanaRoute ejecutándose en puerto ${PORT}`);
       console.log(`📍 API disponible en http://localhost:${PORT}/api\n`);
