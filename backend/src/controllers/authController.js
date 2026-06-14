@@ -63,7 +63,8 @@ async function register(req, res, next) {
         id: usuario.id, 
         email: usuario.email, 
         nombre: usuario.nombre,
-        rol: 'turista'
+        rol: 'turista',
+        rol_id: 1
       },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN }
@@ -76,6 +77,7 @@ async function register(req, res, next) {
         nombre: usuario.nombre,
         email: usuario.email,
         rol: 'turista',
+        rol_id: 1,
       },
     }, 201);
   } catch (err) {
@@ -115,7 +117,8 @@ async function login(req, res, next) {
         id: usuario.id, 
         email: usuario.email, 
         nombre: usuario.nombre,
-        rol: rolNombre
+        rol: rolNombre,
+        rol_id: usuario.rol_id
       },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN }
@@ -128,6 +131,7 @@ async function login(req, res, next) {
         nombre: usuario.nombre,
         email: usuario.email,
         rol: rolNombre,
+        rol_id: usuario.rol_id,
       },
     });
   } catch (err) {
@@ -171,6 +175,7 @@ async function me(req, res, next) {
     return success(res, {
       ...usuarioJson,
       rol: req.user.rol,
+      rol_id: usuarioJson.rol_id,
       favoritos: (usuarioJson.favoritos || []).map(formatearFavorito),
     });
   } catch (err) {
@@ -215,6 +220,7 @@ async function updateMe(req, res, next) {
     return success(res, {
       ...usuario.toJSON(),
       rol: req.user.rol,
+      rol_id: usuario.rol_id,
     });
   } catch (err) {
     next(err);

@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
@@ -59,6 +59,9 @@ function SinSesion() {
 export default function PerfilScreen() {
   const { usuario, isAuthenticated, logout, setUsuario } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+
+  const esNegocio = usuario?.rol_id === 2 || usuario?.rol === 'negocio';
 
   const [perfil, setPerfil] = useState<UsuarioPerfil | null>(null);
   const [cargandoPerfil, setCargandoPerfil] = useState(false);
@@ -73,6 +76,12 @@ export default function PerfilScreen() {
     ? perfilVisible.nombre.split(' ').map((parte) => parte[0]).join('').slice(0, 2).toUpperCase()
     : '?';
   const etiquetas = ETIQUETAS_ROL[perfilVisible?.rol ?? 'turista'] ?? [];
+
+  useEffect(() => {
+    if (esNegocio && pathname === '/(tabs)/perfil') {
+      router.replace('/(tabs)/perfil-negocios');
+    }
+  }, [esNegocio, pathname, router]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -90,7 +99,7 @@ export default function PerfilScreen() {
     }
   }, [perfilVisible?.id]);
 
-  const cargarPerfil = async (pullToRefresh = false) => {
+  async function cargarPerfil(pullToRefresh = false) {
     try {
       if (pullToRefresh) {
         setRefrescando(true);
@@ -121,9 +130,9 @@ export default function PerfilScreen() {
       setCargandoPerfil(false);
       setRefrescando(false);
     }
-  };
+  }
 
-  const cargarIntereses = async (usuarioId: string) => {
+  async function cargarIntereses(usuarioId: string) {
     try {
       const guardado = await AsyncStorage.getItem(`${INTERESES_STORAGE_PREFIX}${usuarioId}`);
       if (!guardado) {
@@ -136,27 +145,27 @@ export default function PerfilScreen() {
     } catch {
       setIntereses([]);
     }
-  };
+  }
 
-  const guardarIntereses = async (siguientesIntereses: string[]) => {
+  async function guardarIntereses(siguientesIntereses: string[]) {
     if (!perfilVisible?.id) return;
     await AsyncStorage.setItem(
       `${INTERESES_STORAGE_PREFIX}${perfilVisible.id}`,
       JSON.stringify(siguientesIntereses)
     );
-  };
+  }
 
-  const handleLogout = async () => {
+  async function handleLogout() {
     await logout();
     router.replace('/login');
-  };
+  }
 
-  const abrirModalIntereses = () => {
+  function abrirModalIntereses() {
     setNuevoInteres('');
     setModalInteresVisible(true);
-  };
+  }
 
-  const agregarInteres = async () => {
+  async function agregarInteres() {
     const interes = nuevoInteres.trim();
 
     if (!interes) {
@@ -179,22 +188,22 @@ export default function PerfilScreen() {
     } finally {
       setGuardandoInteres(false);
     }
-  };
+  }
 
-  const eliminarInteres = async (interesAEliminar: string) => {
+  async function eliminarInteres(interesAEliminar: string) {
     const siguientes = intereses.filter((interes) => interes !== interesAEliminar);
     setIntereses(siguientes);
     await guardarIntereses(siguientes);
-  };
+  }
 
-  const irAConfiguracion = (action: string) => {
+  function irAConfiguracion(action: string) {
     if (action === 'editar') {
       router.push('/perfil/editar');
       return;
     }
 
     router.push('/perfil/configuracion');
-  };
+  }
 
   if (!isAuthenticated) return <SinSesion />;
 

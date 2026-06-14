@@ -16,6 +16,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="explorar" />
       <Tabs.Screen name="guardados" />
       <Tabs.Screen name="perfil" />
+      <Tabs.Screen name="perfil-negocios" />
     </Tabs>
   );
 }

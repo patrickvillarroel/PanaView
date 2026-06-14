@@ -1,11 +1,34 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORES } from '../constants/config';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+type TabRoute = {
+  key: string;
+  name: string;
+};
+
+type TabBarState = {
+  index: number;
+  routes: TabRoute[];
+};
+
+type TabBarNavigation = {
+  emit: (event: {
+    type: 'tabPress';
+    target: string;
+    canPreventDefault: boolean;
+  }) => { defaultPrevented: boolean };
+  navigate: (routeName: string) => void;
+};
+
+type CustomTabBarProps = {
+  state: TabBarState;
+  navigation: TabBarNavigation;
+};
 
 const TABS: Record<string, { label: string; activo: IoniconName; inactivo: IoniconName }> = {
   mapa:       { label: 'Mapa',       activo: 'map',       inactivo: 'map-outline' },
@@ -14,13 +37,14 @@ const TABS: Record<string, { label: string; activo: IoniconName; inactivo: Ionic
   perfil:     { label: 'Perfil',     activo: 'person',    inactivo: 'person-outline' },
 };
 
-export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
+export default function CustomTabBar({ state, navigation }: CustomTabBarProps) {
   const insets = useSafeAreaInsets();
 
   return (
     <View style={[styles.contenedor, { paddingBottom: Math.max(insets.bottom, 12) }]}>
       {state.routes.map((route, index) => {
         const activo = state.index === index;
+        if (route.name === 'perfil-negocios') return null;
         const tab = TABS[route.name];
         if (!tab) return null;
 

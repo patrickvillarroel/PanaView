@@ -3,6 +3,7 @@ export interface Usuario {
   nombre: string;
   email: string;
   rol: 'turista' | 'negocio' | 'admin';
+  rol_id?: 1 | 2 | 3;
   foto_url?: string;
 }
 
