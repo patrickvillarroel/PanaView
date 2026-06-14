@@ -1,26 +1,26 @@
-const { Negocio, CategoriaNegocio } = require('../models');
+const { Negocio, CategoriaNegocio, ImagenNegocio, ResenaNegocio, sequelize } = require('../models');
 const { success, error } = require('../utils/responseHelper');
 const { calcularDistancia } = require('../utils/geoHelper');
+const { fn, col, literal } = require('sequelize');
 
 // Obtener negocios cercanos por geolocalización
 async function getNegociosCercanos(req, res, next) {
   try {
     const { lat, lng, radio } = req.query;
-    
-    // Validar parámetros
+
     if (!lat || !lng) {
       return error(res, 'Latitud y longitud son requeridas', 400);
     }
-    
+
     const latNum = parseFloat(lat);
     const lngNum = parseFloat(lng);
     const radioNum = parseInt(radio) || 500;
-    
+
     if (isNaN(latNum) || isNaN(lngNum) || radioNum <= 0) {
       return error(res, 'Parámetros de geolocalización inválidos', 400);
     }
-    
-    // Obtener todos los negocios activos
+
+    // Obtener todos los negocios activos con imágenes
     const negocios = await Negocio.findAll({
       where: { activo: true },
       include: [
@@ -29,10 +29,35 @@ async function getNegociosCercanos(req, res, next) {
           as: 'categoria',
           attributes: ['id', 'nombre', 'icono'],
         },
+        {
+          model: ImagenNegocio,
+          as: 'imagenes',
+          attributes: ['url', 'es_portada', 'orden'],
+        },
       ],
     });
-    
-    // Filtrar por distancia
+
+    // Obtener ratings de todos los negocios en una sola consulta
+    const ratings = await ResenaNegocio.findAll({
+      attributes: [
+        'negocio_id',
+        [fn('ROUND', fn('COALESCE', fn('AVG', col('calificacion')), 0), 1), 'calificacion_promedio'],
+        [fn('COUNT', col('id')), 'total_resenas'],
+      ],
+      group: ['negocio_id'],
+      raw: true,
+    });
+
+    // Map de ratings por negocio_id
+    const ratingsMap = {};
+    ratings.forEach(r => {
+      ratingsMap[r.negocio_id] = {
+        calificacion_promedio: parseFloat(r.calificacion_promedio),
+        total_resenas: parseInt(r.total_resenas),
+      };
+    });
+
+    // Filtrar por distancia y agregar ratings
     const negociosFiltrados = negocios
       .map(negocio => {
         const distancia = calcularDistancia(
@@ -41,15 +66,18 @@ async function getNegociosCercanos(req, res, next) {
           parseFloat(negocio.latitud),
           parseFloat(negocio.longitud)
         );
-        
+        const rating = ratingsMap[negocio.id] || { calificacion_promedio: 0, total_resenas: 0 };
+
         return {
           ...negocio.toJSON(),
           distancia_metros: distancia,
+          calificacion_promedio: rating.calificacion_promedio,
+          total_resenas: rating.total_resenas,
         };
       })
       .filter(negocio => negocio.distancia_metros <= radioNum)
       .sort((a, b) => a.distancia_metros - b.distancia_metros);
-    
+
     return success(res, negociosFiltrados);
   } catch (err) {
     next(err);
@@ -60,7 +88,7 @@ async function getNegociosCercanos(req, res, next) {
 async function getNegocioById(req, res, next) {
   try {
     const { id } = req.params;
-    
+
     const negocio = await Negocio.findByPk(id, {
       include: [
         {
@@ -68,14 +96,43 @@ async function getNegocioById(req, res, next) {
           as: 'categoria',
           attributes: ['id', 'nombre', 'icono'],
         },
+        {
+          model: ImagenNegocio,
+          as: 'imagenes',
+          attributes: ['url', 'es_portada', 'orden'],
+          order: [['orden', 'ASC']],
+        },
+        {
+          model: ResenaNegocio,
+          as: 'resenas',
+          include: [
+            {
+              model: require('../models').Usuario,
+              as: 'usuario',
+              attributes: ['id', 'nombre', 'foto_url'],
+            },
+          ],
+          order: [['creado_en', 'DESC']],
+        },
       ],
     });
-    
+
     if (!negocio) {
       return error(res, 'Negocio no encontrado', 404);
     }
-    
-    return success(res, negocio);
+
+    // Calcular rating desde las reseñas incluidas
+    const negocioJson = negocio.toJSON();
+    const resenasList = negocioJson.resenas || [];
+    const totalResenas = resenasList.length;
+    const calificacionPromedio = totalResenas > 0
+      ? parseFloat((resenasList.reduce((sum, r) => sum + r.calificacion, 0) / totalResenas).toFixed(1))
+      : 0;
+
+    negocioJson.calificacion_promedio = calificacionPromedio;
+    negocioJson.total_resenas = totalResenas;
+
+    return success(res, negocioJson);
   } catch (err) {
     next(err);
   }
@@ -85,11 +142,11 @@ async function getNegocioById(req, res, next) {
 async function createNegocio(req, res, next) {
   try {
     const { nombre, descripcion, latitud, longitud, direccion, telefono, whatsapp, horario, sitio_web, categoria_id } = req.body;
-    
+
     if (!nombre || !latitud || !longitud || !categoria_id) {
       return error(res, 'Faltan campos requeridos', 400);
     }
-    
+
     const negocio = await Negocio.create({
       nombre,
       descripcion,
@@ -101,9 +158,9 @@ async function createNegocio(req, res, next) {
       horario,
       sitio_web,
       categoria_id,
-      propietario_id: req.user.id, // El usuario del token es el propietario
+      propietario_id: req.user.id,
     });
-    
+
     return success(res, negocio, 201);
   } catch (err) {
     next(err);
@@ -115,17 +172,16 @@ async function updateNegocio(req, res, next) {
   try {
     const { id } = req.params;
     const { nombre, descripcion, latitud, longitud, direccion, telefono, whatsapp, horario, sitio_web, categoria_id } = req.body;
-    
+
     const negocio = await Negocio.findByPk(id);
     if (!negocio) {
       return error(res, 'Negocio no encontrado', 404);
     }
-    
-    // Validar permisos
+
     if (negocio.propietario_id !== req.user.id && req.user.rol !== 'admin') {
       return error(res, 'No tienes permisos para actualizar este negocio', 403);
     }
-    
+
     await negocio.update({
       nombre: nombre || negocio.nombre,
       descripcion: descripcion || negocio.descripcion,
@@ -138,7 +194,7 @@ async function updateNegocio(req, res, next) {
       sitio_web: sitio_web || negocio.sitio_web,
       categoria_id: categoria_id || negocio.categoria_id,
     });
-    
+
     return success(res, negocio);
   } catch (err) {
     next(err);

@@ -692,6 +692,7 @@ const MAPA_HTML = `
 
 interface Props {
   onLugarPress: (id: string) => void;
+  onNegocioPress?: (id: string) => void;
 }
 
 interface CoordenadasUsuario {
@@ -700,7 +701,7 @@ interface CoordenadasUsuario {
   accuracy: number;
 }
 
-export default function MapaWebView({ onLugarPress }: Props) {
+export default function MapaWebView({ onLugarPress, onNegocioPress }: Props) {
   const [isDark, setIsDark] = useState(false);
   const ref = useRef<WebView>(null);
   const watcherRef = useRef<Location.LocationSubscription | null>(null);
@@ -749,6 +750,10 @@ export default function MapaWebView({ onLugarPress }: Props) {
             if (data.id) onLugarPress(data.id);
             break;
           case 'OPEN_NEGOCIO':
+            if (data.id && onNegocioPress) {
+              onNegocioPress(data.id);
+              break;
+            }
             Alert.alert(
               'Negocio cercano',
               'Este restaurante aparece por cercan\u00eda. El detalle de negocios todav\u00eda no tiene pantalla individual.'
