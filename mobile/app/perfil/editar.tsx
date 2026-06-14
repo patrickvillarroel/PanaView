@@ -21,7 +21,7 @@ import { COLORES } from '../../constants/config';
 import authService from '../../services/authService';
 
 export default function EditarPerfilScreen() {
-  const { usuario, setUsuario } = useAuth();
+  const { usuario, setUsuario, logout } = useAuth();
   const router = useRouter();
 
   const [nombre, setNombre] = useState('');
@@ -66,7 +66,12 @@ export default function EditarPerfilScreen() {
         },
       ]);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'No se pudo actualizar el perfil');
+      const msg = error.message || '';
+      if (msg === 'Usuario no encontrado') {
+        await logout();
+        return;
+      }
+      Alert.alert('Error', msg || 'No se pudo actualizar el perfil');
     } finally {
       setGuardando(false);
     }

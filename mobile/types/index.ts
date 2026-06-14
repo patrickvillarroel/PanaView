@@ -53,6 +53,14 @@ export interface Negocio {
     nombre: string;
     icono?: string;
   };
+  imagenes: {
+    id?: number;
+    url: string;
+    es_portada: boolean;
+    orden?: number;
+  }[];
+  calificacion_promedio?: number;
+  total_resenas?: number;
   distancia_metros?: number;
   propietario_id?: string;
 }
@@ -113,4 +121,16 @@ export interface CategoriaNegocio {
   id: number;
   nombre: string;
   icono: string;
+}
+
+export interface Promocion {
+  id: string;
+  negocio_id: string;
+  nombre: string;
+  descripcion?: string;
+  precio: number;
+  fecha_validez?: string;
+  qr_codigo: string;
+  activo?: boolean;
+  creado_en?: string;
 }

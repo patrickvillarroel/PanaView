@@ -64,7 +64,13 @@ export default function GuardadosScreen() {
         return;
       }
 
-      Alert.alert('Error', error.message || 'No se pudieron cargar tus guardados');
+      const msg = error.message || '';
+      if (msg === 'Usuario no encontrado') {
+        await logout();
+        return;
+      }
+
+      Alert.alert('Error', msg || 'No se pudieron cargar tus guardados');
     } finally {
       setCargando(false);
       setRefrescando(false);

@@ -3,8 +3,8 @@ import { Platform } from 'react-native';
 
 const getBaseUrl = (): string => {
   if (Platform.OS === 'android') {
-    // Android emulator accede al host mediante 10.0.2.2
-    return 'http://192.168.0.3:3000/api';
+    // Android emulator accede al host mediante 10.0.2.2, real device usa IP local
+    return 'http://192.168.0.3:3000';
   }
   return 'http://localhost:3000';
 };

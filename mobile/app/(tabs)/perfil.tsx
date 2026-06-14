@@ -125,7 +125,13 @@ export default function PerfilScreen() {
         return;
       }
 
-      Alert.alert('Error', error.message || 'No se pudo cargar el perfil');
+      const msg = error.message || '';
+      if (msg === 'Usuario no encontrado') {
+        await logout();
+        return;
+      }
+
+      Alert.alert('Error', msg || 'No se pudo cargar el perfil');
     } finally {
       setCargandoPerfil(false);
       setRefrescando(false);
