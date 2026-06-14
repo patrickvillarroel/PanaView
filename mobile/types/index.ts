@@ -52,6 +52,11 @@ export interface Negocio {
     nombre: string;
     icono?: string;
   };
+  imagenes: {
+    url: string;
+    es_portada: boolean;
+    orden?: number;
+  }[];
   distancia_metros?: number;
   calificacion_promedio?: number;
   total_resenas?: number;

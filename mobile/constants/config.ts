@@ -1,14 +1,16 @@
 // Configuración global de la aplicación
 import { Platform } from 'react-native';
 
-const getApiUrl = (): string => {
+const getBaseUrl = (): string => {
   if (Platform.OS === 'android') {
-    // Android emulator accede al host mediante 10.0.2.2
-    return 'http://192.168.1.110:3000/api';
+    return 'http://192.168.1.110:3000';
   }
-  return 'http://localhost:3000/api';
+  return 'http://localhost:3000';
 };
 
+const getApiUrl = (): string => `${getBaseUrl()}/api`;
+
+export const BASE_URL = getBaseUrl();
 export const API_URL = getApiUrl();
 export const RADIO_DEFAULT = 500; // metros
 

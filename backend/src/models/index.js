@@ -9,9 +9,12 @@ const Lugar = require('./Lugar');
 const ImagenLugar = require('./ImagenLugar');
 const CategoriaNegocio = require('./CategoriaNegocio');
 const Negocio = require('./Negocio');
+const ImagenNegocio = require('./ImagenNegocio');
 const ResenaLugar = require('./ResenaLugar');
 const Favorito = require('./Favorito');
+const FavoritoNegocio = require('./FavoritoNegocio');
 const HistorialVisita = require('./HistorialVisita');
+const ResenaNegocio = require('./ResenaNegocio');
 const Promocion = require('./Promocion');
 
 // Inicializar modelos
@@ -22,9 +25,12 @@ const lugar = Lugar(sequelize, DataTypes);
 const imagenLugar = ImagenLugar(sequelize, DataTypes);
 const categoriaNegocio = CategoriaNegocio(sequelize, DataTypes);
 const negocio = Negocio(sequelize, DataTypes);
+const imagenNegocio = ImagenNegocio(sequelize, DataTypes);
 const resenaLugar = ResenaLugar(sequelize, DataTypes);
 const favorito = Favorito(sequelize, DataTypes);
+const favoritoNegocio = FavoritoNegocio(sequelize, DataTypes);
 const historialVisita = HistorialVisita(sequelize, DataTypes);
+const resenaNegocio = ResenaNegocio(sequelize, DataTypes);
 const promocion = Promocion(sequelize, DataTypes);
 
 // Definir asociaciones
@@ -48,6 +54,18 @@ negocio.belongsTo(usuario, { foreignKey: 'propietario_id', as: 'propietario' });
 categoriaNegocio.hasMany(negocio, { foreignKey: 'categoria_id', as: 'negocios' });
 negocio.belongsTo(categoriaNegocio, { foreignKey: 'categoria_id', as: 'categoria' });
 
+// Negocio -> ImagenNegocio
+negocio.hasMany(imagenNegocio, { foreignKey: 'negocio_id', as: 'imagenes' });
+imagenNegocio.belongsTo(negocio, { foreignKey: 'negocio_id' });
+
+// Negocio -> ResenaNegocio
+negocio.hasMany(resenaNegocio, { foreignKey: 'negocio_id', as: 'resenas' });
+resenaNegocio.belongsTo(negocio, { foreignKey: 'negocio_id' });
+
+// Usuario -> ResenaNegocio
+usuario.hasMany(resenaNegocio, { foreignKey: 'usuario_id', as: 'resenasNegocio' });
+resenaNegocio.belongsTo(usuario, { foreignKey: 'usuario_id', as: 'usuario' });
+
 // Lugar -> ResenaLugar
 lugar.hasMany(resenaLugar, { foreignKey: 'lugar_id', as: 'resenas' });
 resenaLugar.belongsTo(lugar, { foreignKey: 'lugar_id' });
@@ -59,6 +77,10 @@ resenaLugar.belongsTo(usuario, { foreignKey: 'usuario_id', as: 'usuario' });
 // Favoritos (M2M)
 usuario.belongsToMany(lugar, { through: favorito, foreignKey: 'usuario_id', otherKey: 'lugar_id', as: 'favoritos' });
 lugar.belongsToMany(usuario, { through: favorito, foreignKey: 'lugar_id', otherKey: 'usuario_id', as: 'favoritos_usuarios' });
+
+// Favoritos Negocio (M2M)
+usuario.belongsToMany(negocio, { through: favoritoNegocio, foreignKey: 'usuario_id', otherKey: 'negocio_id', as: 'negociosFavoritos' });
+negocio.belongsToMany(usuario, { through: favoritoNegocio, foreignKey: 'negocio_id', otherKey: 'usuario_id', as: 'usuariosFavoritos' });
 
 // Historial de visitas (M2M)
 usuario.belongsToMany(lugar, { through: historialVisita, foreignKey: 'usuario_id', otherKey: 'lugar_id', as: 'visitados' });
@@ -77,8 +99,11 @@ module.exports = {
   ImagenLugar: imagenLugar,
   CategoriaNegocio: categoriaNegocio,
   Negocio: negocio,
+  ImagenNegocio: imagenNegocio,
   ResenaLugar: resenaLugar,
+  ResenaNegocio: resenaNegocio,
   Favorito: favorito,
+  FavoritoNegocio: favoritoNegocio,
   HistorialVisita: historialVisita,
   Promocion: promocion,
 };

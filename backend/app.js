@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const rateLimit = require('express-rate-limit');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./src/config/swagger');
@@ -9,6 +10,9 @@ const lugaresRoutes = require('./src/routes/lugaresRoutes');
 const negociosRoutes = require('./src/routes/negociosRoutes');
 const resenasRoutes = require('./src/routes/resenasRoutes');
 const promocionesRoutes = require('./src/routes/promocionesRoutes');
+const favoritosNegociosRoutes = require('./src/routes/favoritosNegociosRoutes');
+const imagenesNegocioRoutes = require('./src/routes/imagenesNegocioRoutes');
+const resenasNegociosRoutes = require('./src/routes/resenasNegociosRoutes');
 const errorMiddleware = require('./src/middlewares/errorMiddleware');
 
 const app = express();
@@ -19,6 +23,9 @@ app.use(cors({
   origin: '*', // En producción, especificar orígenes permitidos
   credentials: true,
 }));
+
+// Archivos estáticos (imágenes subidas)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Rate limiting para rutas de autenticación
 const authLimiter = rateLimit({
@@ -55,6 +62,9 @@ app.use('/api/lugares', lugaresRoutes);
 app.use('/api/negocios', negociosRoutes);
 app.use('/api/resenas', resenasRoutes);
 app.use('/api/promociones', promocionesRoutes);
+app.use('/api/favoritos-negocios', favoritosNegociosRoutes);
+app.use('/api/imagenes-negocio', imagenesNegocioRoutes);
+app.use('/api/resenas-negocios', resenasNegociosRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
