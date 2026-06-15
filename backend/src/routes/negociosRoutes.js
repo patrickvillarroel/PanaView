@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
-const roleMiddleware = require('../middlewares/roleMiddleware');
-const { getNegociosCercanos, getNegocioById, createNegocio, updateNegocio } = require('../controllers/negociosController');
+const { getCategoriasNegocio, getMisNegocios, getNegociosCercanos, getNegocioById, createNegocio, updateNegocio } = require('../controllers/negociosController');
 
 /**
  * @swagger
@@ -43,6 +42,15 @@ const { getNegociosCercanos, getNegocioById, createNegocio, updateNegocio } = re
  *         description: Coordenadas requeridas
  */
 router.get('/', getNegociosCercanos);
+
+// Obtener categorías de negocios (público)
+router.get('/categorias', getCategoriasNegocio);
+
+// Obtener negocios del propietario autenticado
+router.get('/mis-negocios', (req, res, next) => {
+  console.log('[ROUTE] /mis-negocios hit');
+  next();
+}, getMisNegocios);
 
 /**
  * @swagger
@@ -87,12 +95,7 @@ router.get('/:id', getNegocioById);
  *       403:
  *         description: Rol insuficiente
  */
-router.post('/', authMiddleware, (req, res, next) => {
-  if (req.user.rol !== 'negocio' && req.user.rol !== 'admin') {
-    return res.status(403).json({ success: false, message: 'No tienes permisos para crear negocios' });
-  }
-  next();
-}, createNegocio);
+router.post('/', authMiddleware, createNegocio);
 
 /**
  * @swagger

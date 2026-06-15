@@ -44,7 +44,6 @@ export default function CustomTabBar({ state, navigation }: CustomTabBarProps) {
     <View style={[styles.contenedor, { paddingBottom: Math.max(insets.bottom, 12) }]}>
       {state.routes.map((route, index) => {
         const activo = state.index === index;
-        if (route.name === 'perfil-negocios') return null;
         const tab = TABS[route.name];
         if (!tab) return null;
 

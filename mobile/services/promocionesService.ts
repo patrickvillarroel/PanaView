@@ -24,6 +24,32 @@ class PromocionesService {
   async redeemById(id: string): Promise<void> {
     await api.post(`/promociones/${id}/redeem`);
   }
+
+  async subirImagen(
+    promocionId: string,
+    uri: string,
+    esPortada: boolean = false
+  ): Promise<any> {
+    try {
+      const formData = new FormData();
+      const filename = uri.split('/').pop() || 'imagen.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : 'image/jpeg';
+      formData.append('imagen', { uri, name: filename, type } as any);
+      formData.append('es_portada', String(esPortada));
+
+      const response = await api.post(
+        `/imagenes-promocion/${promocionId}`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(
+        error.response?.data?.message || 'Error al subir imagen'
+      );
+    }
+  }
 }
 
 export default new PromocionesService();

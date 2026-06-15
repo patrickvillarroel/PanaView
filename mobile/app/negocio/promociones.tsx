@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  Image,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,7 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import PromocionesService from '../../services/promocionesService';
 import { Promocion } from '../../types';
 import LoadingOverlay from '../../components/LoadingOverlay';
-import { COLORES, ESPACIADO, TAMAÑOS, BORDES } from '../../constants/config';
+import { COLORES, ESPACIADO, TAMAÑOS, BORDES, BASE_URL } from '../../constants/config';
 
 const { width: ANCHO } = Dimensions.get('window');
 const ALTO_HERO = 200;
@@ -44,16 +45,17 @@ export default function PromocionesScreen() {
   };
 
   const formatearFecha = (fecha?: string) => {
-    if (!fecha) return 'Sin fecha límite';
+    if (!fecha || fecha === 'Invalid date') return 'Sin fecha límite';
     try {
       const d = new Date(fecha);
+      if (isNaN(d.getTime())) return 'Sin fecha límite';
       return d.toLocaleDateString('es-PA', {
         day: 'numeric',
         month: 'short',
         year: 'numeric',
       });
     } catch {
-      return fecha;
+      return 'Sin fecha límite';
     }
   };
 
@@ -121,6 +123,9 @@ export default function PromocionesScreen() {
           renderItem={({ item }) => {
             const precio = formatearPrecio(item.precio);
             const fecha = formatearFecha(item.fecha_validez);
+            const imagenUri = item.imagenes?.[0]?.url
+              ? `${BASE_URL}${item.imagenes[0].url}`
+              : null;
 
             return (
               <TouchableOpacity
@@ -128,28 +133,40 @@ export default function PromocionesScreen() {
                 activeOpacity={0.85}
                 onPress={() => router.push(`/negocio/promocionDetalle?id=${item.id}`)}
               >
-                <View style={styles.promoIcono}>
-                  <Ionicons name="pricetag" size={22} color="#fff" />
-                </View>
-                <View style={styles.promoContenido}>
-                  <Text style={styles.promoNombre} numberOfLines={2}>
-                    {item.nombre}
-                  </Text>
-                  {item.descripcion ? (
-                    <Text style={styles.promoDesc} numberOfLines={1}>
-                      {item.descripcion}
-                    </Text>
-                  ) : null}
-                  <View style={styles.promoMeta}>
-                    <Ionicons name="calendar-outline" size={13} color={COLORES.textoBorrado} />
-                    <Text style={styles.promoMetaTexto}>{fecha}</Text>
-                  </View>
-                </View>
-                {precio && (
-                  <View style={styles.promoPrecio}>
-                    <Text style={styles.promoPrecioTexto}>{precio}</Text>
+                {imagenUri ? (
+                  <Image source={{ uri: imagenUri }} style={styles.promoCardImagen} />
+                ) : (
+                  <View style={styles.promoCardPlaceholder}>
+                    <Ionicons name="pricetag" size={36} color="#fff" />
                   </View>
                 )}
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.75)']}
+                  style={styles.promoCardGradiente}
+                />
+                <View style={styles.promoCardOverlay}>
+                  <View style={styles.promoCardBody}>
+                    <Text style={styles.promoCardNombre} numberOfLines={2}>
+                      {item.nombre}
+                    </Text>
+                    {item.descripcion ? (
+                      <Text style={styles.promoCardDesc} numberOfLines={2}>
+                        {item.descripcion}
+                      </Text>
+                    ) : null}
+                    <View style={styles.promoCardFooter}>
+                      <View style={styles.promoCardFecha}>
+                        <Ionicons name="calendar-outline" size={12} color="rgba(255,255,255,0.8)" />
+                        <Text style={styles.promoCardFechaTexto}>{fecha}</Text>
+                      </View>
+                      {precio && (
+                        <View style={styles.promoCardPrecio}>
+                          <Text style={styles.promoCardPrecioTexto}>{precio}</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                </View>
               </TouchableOpacity>
             );
           }}
@@ -264,53 +281,74 @@ const styles = StyleSheet.create({
   },
 
   promoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORES.fondoGris,
+    height: 200,
     borderRadius: BORDES.redondeadoGrande,
-    padding: ESPACIADO.md,
-    marginBottom: ESPACIADO.sm,
+    overflow: 'hidden',
+    marginBottom: ESPACIADO.md,
+    backgroundColor: '#000',
   },
-  promoIcono: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  promoCardImagen: {
+    width: '100%',
+    height: '100%',
+  },
+  promoCardPlaceholder: {
+    width: '100%',
+    height: '100%',
     backgroundColor: COLORES.primario,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: ESPACIADO.md,
   },
-  promoContenido: {
-    flex: 1,
+  promoCardGradiente: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '65%',
   },
-  promoNombre: {
-    fontSize: TAMAÑOS.fontoMedio,
-    fontWeight: '700',
-    color: COLORES.texto,
+  promoCardOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: ESPACIADO.md,
   },
-  promoDesc: {
+  promoCardBody: {},
+  promoCardNombre: {
+    fontSize: TAMAÑOS.fontoGrande,
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 4,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  promoCardDesc: {
     fontSize: TAMAÑOS.fontoPequeno,
-    color: COLORES.textoBorrado,
-    marginTop: 2,
+    color: 'rgba(255,255,255,0.85)',
+    lineHeight: 18,
+    marginBottom: 8,
   },
-  promoMeta: {
+  promoCardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  promoCardFecha: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: ESPACIADO.xs,
   },
-  promoMetaTexto: {
+  promoCardFechaTexto: {
     fontSize: TAMAÑOS.fontoPequeno,
-    color: COLORES.textoBorrado,
+    color: 'rgba(255,255,255,0.8)',
   },
-  promoPrecio: {
+  promoCardPrecio: {
     backgroundColor: COLORES.acento,
     borderRadius: BORDES.redondeado,
     paddingHorizontal: ESPACIADO.md,
-    paddingVertical: ESPACIADO.sm,
-    marginLeft: ESPACIADO.sm,
+    paddingVertical: ESPACIADO.xs,
   },
-  promoPrecioTexto: {
+  promoCardPrecioTexto: {
     fontSize: TAMAÑOS.fontoMedio,
     fontWeight: '800',
     color: COLORES.primario,

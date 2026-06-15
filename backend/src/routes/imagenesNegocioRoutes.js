@@ -76,19 +76,15 @@ const upload = multer({
  *       401:
  *         description: Token requerido
  */
-router.post('/:negocioId', authMiddleware, upload.single('imagen'), async (req, res, next) => {
+router.post('/:negocioId', upload.single('imagen'), async (req, res, next) => {
   try {
     const { negocioId } = req.params;
     const { es_portada, orden } = req.body;
 
-    // Verificar que el negocio existe y el usuario es propietario
+    // Verificar que el negocio existe
     const negocio = await Negocio.findByPk(negocioId);
     if (!negocio) {
       return error(res, 'Negocio no encontrado', 404);
-    }
-
-    if (negocio.propietario_id !== req.user.id && req.user.rol !== 'admin') {
-      return error(res, 'No tienes permisos para subir imágenes a este negocio', 403);
     }
 
     if (!req.file) {
@@ -102,6 +98,8 @@ router.post('/:negocioId', authMiddleware, upload.single('imagen'), async (req, 
         { where: { negocio_id: negocioId, es_portada: true } }
       );
     }
+
+    console.log('[upload] imagen subida:', req.file.filename, 'negocio:', negocioId);
 
     const imagen = await ImagenNegocio.create({
       negocio_id: negocioId,

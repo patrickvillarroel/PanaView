@@ -1,7 +1,20 @@
-const { Negocio, CategoriaNegocio, ImagenNegocio, ResenaNegocio, sequelize } = require('../models');
+const { Negocio, CategoriaNegocio, ImagenNegocio, ResenaNegocio, Promocion, ImagenPromocion, sequelize } = require('../models');
 const { success, error } = require('../utils/responseHelper');
 const { calcularDistancia } = require('../utils/geoHelper');
 const { fn, col, literal } = require('sequelize');
+
+// Obtener categorías de negocios
+async function getCategoriasNegocio(req, res, next) {
+  try {
+    const categorias = await CategoriaNegocio.findAll({
+      attributes: ['id', 'nombre', 'icono'],
+      order: [['id', 'ASC']],
+    });
+    return success(res, categorias);
+  } catch (err) {
+    next(err);
+  }
+}
 
 // Obtener negocios cercanos por geolocalización
 async function getNegociosCercanos(req, res, next) {
@@ -138,12 +151,62 @@ async function getNegocioById(req, res, next) {
   }
 }
 
-// Crear negocio (solo negocio o admin)
+// Obtener negocios del propietario autenticado
+async function getMisNegocios(req, res, next) {
+  try {
+    const jwt = require('jsonwebtoken');
+    let usuarioId = null;
+
+    // Intentar obtener usuarioId del token JWT
+    const authHeader = req.headers.authorization;
+    if (authHeader) {
+      try {
+        const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        usuarioId = decoded.id;
+      } catch {
+        // Token inválido, continuar sin usuarioId
+      }
+    }
+
+    console.log('[getMisNegocios] usuarioId:', usuarioId);
+
+    if (!usuarioId) {
+      return success(res, []);
+    }
+
+    const negocios = await Negocio.findAll({
+      where: { propietario_id: usuarioId },
+      include: [
+        {
+          model: CategoriaNegocio,
+          as: 'categoria',
+          attributes: ['id', 'nombre', 'icono'],
+        },
+        {
+          model: ImagenNegocio,
+          as: 'imagenes',
+          attributes: ['url', 'es_portada', 'orden'],
+        },
+      ],
+    });
+
+    console.log('[getMisNegocios] encontrados:', negocios.length);
+    return success(res, negocios);
+  } catch (err) {
+    console.error('[getMisNegocios]', err);
+    next(err);
+  }
+}
+
+// Crear negocio (cualquier usuario autenticado)
 async function createNegocio(req, res, next) {
   try {
-    const { nombre, descripcion, latitud, longitud, direccion, telefono, whatsapp, horario, sitio_web, categoria_id } = req.body;
+    const { nombre, descripcion, latitud, longitud, direccion, telefono, whatsapp, horario, sitio_web, categoria_id, categoria } = req.body;
 
-    if (!nombre || !latitud || !longitud || !categoria_id) {
+    const resolvedCategoriaId = categoria_id || categoria?.id;
+
+    if (!nombre || !latitud || !longitud || !resolvedCategoriaId) {
       return error(res, 'Faltan campos requeridos', 400);
     }
 
@@ -157,9 +220,15 @@ async function createNegocio(req, res, next) {
       whatsapp,
       horario,
       sitio_web,
-      categoria_id,
+      categoria_id: resolvedCategoriaId,
       propietario_id: req.user.id,
     });
+
+    // Si el usuario es turista, actualizarlo a negocio
+    if (req.user.rol === 'turista') {
+      const { Usuario } = require('../models');
+      await Usuario.update({ rol: 'negocio', rol_id: 2 }, { where: { id: req.user.id } });
+    }
 
     return success(res, negocio, 201);
   } catch (err) {
@@ -202,6 +271,8 @@ async function updateNegocio(req, res, next) {
 }
 
 module.exports = {
+  getCategoriasNegocio,
+  getMisNegocios,
   getNegociosCercanos,
   getNegocioById,
   createNegocio,

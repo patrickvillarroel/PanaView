@@ -133,4 +133,9 @@ export interface Promocion {
   qr_codigo: string;
   activo?: boolean;
   creado_en?: string;
+  imagenes: {
+    url: string;
+    es_portada: boolean;
+    orden?: number;
+  }[];
 }

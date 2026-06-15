@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   Dimensions,
+  Image,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,7 +16,7 @@ import QRCode from 'react-native-qrcode-svg';
 import PromocionesService from '../../services/promocionesService';
 import { Promocion } from '../../types';
 import LoadingOverlay from '../../components/LoadingOverlay';
-import { COLORES, ESPACIADO, TAMAÑOS, BORDES } from '../../constants/config';
+import { COLORES, ESPACIADO, TAMAÑOS, BORDES, BASE_URL } from '../../constants/config';
 
 const { width: ANCHO } = Dimensions.get('window');
 
@@ -74,16 +75,17 @@ export default function PromocionDetalle() {
   }
 
   const fecha = (() => {
-    if (!promo.fecha_validez) return 'Sin fecha límite';
+    if (!promo.fecha_validez || promo.fecha_validez === 'Invalid date') return 'Sin fecha límite';
     try {
       const d = new Date(promo.fecha_validez);
+      if (isNaN(d.getTime())) return 'Sin fecha límite';
       return d.toLocaleDateString('es-PA', {
         day: 'numeric',
         month: 'long',
         year: 'numeric',
       });
     } catch {
-      return promo.fecha_validez;
+      return 'Sin fecha límite';
     }
   })();
 
@@ -92,10 +94,14 @@ export default function PromocionDetalle() {
   return (
     <ScrollView style={styles.contenedor} showsVerticalScrollIndicator={false}>
       <View style={styles.hero}>
-        <LinearGradient
-          colors={[COLORES.primario, COLORES.secundario]}
-          style={styles.heroImagen}
-        />
+        {promo.imagenes?.[0]?.url ? (
+          <Image source={{ uri: `${BASE_URL}${promo.imagenes[0].url}` }} style={styles.heroImagen} />
+        ) : (
+          <LinearGradient
+            colors={[COLORES.primario, COLORES.secundario]}
+            style={styles.heroImagen}
+          />
+        )}
         <LinearGradient
           colors={['transparent', 'rgba(0,0,0,0.78)']}
           style={styles.heroGradiente}

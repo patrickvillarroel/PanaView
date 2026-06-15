@@ -42,14 +42,14 @@ CREATE TABLE usuarios (
 
 -- Usuarios semilla (password: 12345678 en bcrypt)
 INSERT INTO usuarios (id, rol_id, nombre, email, password_hash, activo) VALUES
-('a1b2c3d4-e5f6-7890-abcd-ef1234567890', 3, 'Admin PanaRoute', 'admin@panaroute.com', '$2b$12$LJ3m4ys3Lz0QxDuFqFK3ZOjCfZbGfXMQfFz3Rz0qG9Rz5YqZxZqZe', 1),
-('b2c3d4e5-f6a7-8901-bcde-f12345678901', 2, 'Restaurante El Buen Sabor', 'buenabor@email.com', '$2b$12$LJ3m4ys3Lz0QxDuFqFK3ZOjCfZbGfXMQfFz3Rz0qG9Rz5YqZxZqZe', 1),
-('c3d4e5f6-a7b8-9012-cdef-123456789012', 2, 'Café del Mar', 'cafdelmar@email.com', '$2b$12$LJ3m4ys3Lz0QxDuFqFK3ZOjCfZbGfXMQfFz3Rz0qG9Rz5YqZxZqZe', 1),
-('d4e5f6a7-b8c9-0123-defa-234567890123', 2, 'Souvenirs Panamá', 'souvenirs@email.com', '$2b$12$LJ3m4ys3Lz0QxDuFqFK3ZOjCfZbGfXMQfFz3Rz0qG9Rz5YqZxZqZe', 1),
-('e5f6a7b8-c9d0-1234-efab-345678901234', 2, 'Hotel Plaza Amador', 'hotelplaza@email.com', '$2b$12$LJ3m4ys3Lz0QxDuFqFK3ZOjCfZbGfXMQfFz3Rz0qG9Rz5YqZxZqZe', 1),
-('f6a7b8c9-d0e1-2345-fabc-456789012345', 2, 'Tours Panamá Adventure', 'tours@email.com', '$2b$12$LJ3m4ys3Lz0QxDuFqFK3ZOjCfZbGfXMQfFz3Rz0qG9Rz5YqZxZqZe', 1),
-('11111111-2222-3333-4444-555555555555', 1, 'Carlos Turista', 'carlos@email.com', '$2b$12$LJ3m4ys3Lz0QxDuFqFK3ZOjCfZbGfXMQfFz3Rz0qG9Rz5YqZxZqZe', 1),
-('22222222-3333-4444-5555-666666666666', 1, 'María Turista', 'maria@email.com', '$2b$12$LJ3m4ys3Lz0QxDuFqFK3ZOjCfZbGfXMQfFz3Rz0qG9Rz5YqZxZqZe', 1);
+('a1b2c3d4-e5f6-7890-abcd-ef1234567890', 3, 'Admin PanaRoute', 'admin@panaroute.com', '$2b$12$dDskyhRxBiXL8B1295NfGOOkM6EqXe1DCihl4MYk58lrTmqU7dnga', 1),
+('b2c3d4e5-f6a7-8901-bcde-f12345678901', 2, 'Restaurante El Buen Sabor', 'buenabor@email.com', '$2b$12$dDskyhRxBiXL8B1295NfGOOkM6EqXe1DCihl4MYk58lrTmqU7dnga', 1),
+('c3d4e5f6-a7b8-9012-cdef-123456789012', 2, 'Café del Mar', 'cafdelmar@email.com', '$2b$12$dDskyhRxBiXL8B1295NfGOOkM6EqXe1DCihl4MYk58lrTmqU7dnga', 1),
+('d4e5f6a7-b8c9-0123-defa-234567890123', 2, 'Souvenirs Panamá', 'souvenirs@email.com', '$2b$12$dDskyhRxBiXL8B1295NfGOOkM6EqXe1DCihl4MYk58lrTmqU7dnga', 1),
+('e5f6a7b8-c9d0-1234-efab-345678901234', 2, 'Hotel Plaza Amador', 'hotelplaza@email.com', '$2b$12$dDskyhRxBiXL8B1295NfGOOkM6EqXe1DCihl4MYk58lrTmqU7dnga', 1),
+('f6a7b8c9-d0e1-2345-fabc-456789012345', 2, 'Tours Panamá Adventure', 'tours@email.com', '$2b$12$dDskyhRxBiXL8B1295NfGOOkM6EqXe1DCihl4MYk58lrTmqU7dnga', 1),
+('11111111-2222-3333-4444-555555555555', 1, 'Carlos Turista', 'carlos@email.com', '$2b$12$dDskyhRxBiXL8B1295NfGOOkM6EqXe1DCihl4MYk58lrTmqU7dnga', 1),
+('22222222-3333-4444-5555-666666666666', 1, 'María Turista', 'maria@email.com', '$2b$12$dDskyhRxBiXL8B1295NfGOOkM6EqXe1DCihl4MYk58lrTmqU7dnga', 1);
 
 -- ===================================================================
 -- TABLA: categorias_lugar
@@ -402,6 +402,21 @@ INSERT INTO resenas_negocio (negocio_id, usuario_id, calificacion, comentario) V
 ('aaa33333-3333-3333-3333-333333333333', '22222222-3333-4444-5555-666666666666', 4, 'Muy bonitas las molas, precios justos. Buena atención al cliente.'),
 ('aaa44444-4444-4444-4444-444444444444', '11111111-2222-3333-4444-555555555555', 5, 'Hermoso hotel, la vista al mar es impresionante. Muy limpio y tranquilo.'),
 ('aaa55555-5555-5555-5555-555555555555', '22222222-3333-4444-5555-666666666666', 5, 'El tour por el Casco Antiguo fue excelente. Muy profesionales y divertidos.');
+
+-- ===================================================================
+-- TABLA: imagenes_promocion
+-- ===================================================================
+
+CREATE TABLE imagenes_promocion (
+  id INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  promocion_id CHAR(36) NOT NULL,
+  url VARCHAR(500) NOT NULL,
+  es_portada TINYINT(1) DEFAULT 0,
+  orden TINYINT DEFAULT 0,
+  creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (promocion_id) REFERENCES promociones(id) ON DELETE CASCADE,
+  INDEX idx_promocion (promocion_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ===================================================================
 -- VISTA: vw_rating_negocios
