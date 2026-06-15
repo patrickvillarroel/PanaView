@@ -130,7 +130,7 @@ router.post('/', authMiddleware, createNegocio);
  *       404:
  *         description: Negocio no encontrado
  */
-router.put('/:id', authMiddleware, updateNegocio);
+router.put('/:id', updateNegocio);
 
 /**
  * @swagger

@@ -25,10 +25,12 @@ function formatearFavorito(lugar) {
   };
 }
 
+const ROLES = ['turista', 'negocio', 'admin'];
+
 // Registrar nuevo usuario
 async function register(req, res, next) {
   try {
-    const { nombre, email, password } = req.body;
+    const { nombre, email, password, rol_id, terminos_aceptados } = req.body;
     
     // Validar campos requeridos
     if (!nombre || !email || !password) {
@@ -39,6 +41,17 @@ async function register(req, res, next) {
     if (password.length < 8) {
       return error(res, 'La contraseña debe tener al menos 8 caracteres', 400);
     }
+
+    // Validar rol_id
+    const rolValido = [1, 2].includes(Number(rol_id));
+    if (!rolValido) {
+      return error(res, 'Debes seleccionar un rol válido (turista o negocio)', 400);
+    }
+
+    // Validar términos y condiciones
+    if (!terminos_aceptados) {
+      return error(res, 'Debes aceptar los términos y condiciones', 400);
+    }
     
     // Validar email único
     const usuarioExistente = await Usuario.findOne({ where: { email } });
@@ -48,13 +61,16 @@ async function register(req, res, next) {
     
     // Hash de la contraseña
     const passwordHash = await bcrypt.hash(password, 12);
+
+    const rolFinal = Number(rol_id);
+    const rolNombre = ROLES[rolFinal - 1];
     
     // Crear usuario
     const usuario = await Usuario.create({
       nombre,
       email,
       password_hash: passwordHash,
-      rol_id: 1, // turista por defecto
+      rol_id: rolFinal,
     });
     
     // Generar token JWT
@@ -63,8 +79,8 @@ async function register(req, res, next) {
         id: usuario.id, 
         email: usuario.email, 
         nombre: usuario.nombre,
-        rol: 'turista',
-        rol_id: 1
+        rol: rolNombre,
+        rol_id: rolFinal
       },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN }
@@ -76,8 +92,8 @@ async function register(req, res, next) {
         id: usuario.id,
         nombre: usuario.nombre,
         email: usuario.email,
-        rol: 'turista',
-        rol_id: 1,
+        rol: rolNombre,
+        rol_id: rolFinal,
       },
     }, 201);
   } catch (err) {

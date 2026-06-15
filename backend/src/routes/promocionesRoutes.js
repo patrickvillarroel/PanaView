@@ -9,11 +9,19 @@ router.get('/negocios/:negocioId', promocionesController.listarPromociones);
 // Crear promocion (requiere autenticacion y que sea propietario) - simplified for now
 router.post('/negocios/:negocioId', authMiddleware, promocionesController.crearPromocion);
 
+// Redeem endpoints (antes de /:promoId para evitar conflicto)
+router.post('/redeem-by-qr', authMiddleware, promocionesController.redeemByQR);
+
 // Obtener detalle promocion
 router.get('/:promoId', promocionesController.obtenerPromocion);
 
-// Redeem endpoints
+// Actualizar promocion (sin auth para dev)
+router.put('/:promoId', promocionesController.actualizarPromocion);
+
+// Eliminar promocion (sin auth para dev)
+router.delete('/:promoId', promocionesController.eliminarPromocion);
+
+// Redeem by id
 router.post('/:promoId/redeem', authMiddleware, promocionesController.redeemById);
-router.post('/redeem-by-qr', authMiddleware, promocionesController.redeemByQR);
 
 module.exports = router;

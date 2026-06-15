@@ -22,7 +22,7 @@ const authMiddleware = require('../middlewares/authMiddleware');
  *         application/json:
  *           schema:
  *             type: object
- *             required: [nombre, email, password]
+ *     required: [nombre, email, password, rol_id, terminos_aceptados]
  *             properties:
  *               nombre:
  *                 type: string
@@ -34,6 +34,14 @@ const authMiddleware = require('../middlewares/authMiddleware');
  *                 type: string
  *                 minLength: 8
  *                 example: miPassword123
+ *               rol_id:
+ *                 type: integer
+ *                 description: 1 = Turista, 2 = Negocio
+ *                 example: 1
+ *               terminos_aceptados:
+ *                 type: boolean
+ *                 description: Aceptación de términos y condiciones
+ *                 example: true
  *     responses:
  *       201:
  *         description: Usuario registrado exitosamente

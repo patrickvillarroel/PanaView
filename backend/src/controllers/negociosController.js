@@ -288,9 +288,12 @@ async function getMisNegocios(req, res, next) {
         {
           model: ImagenNegocio,
           as: 'imagenes',
-          attributes: ['url', 'es_portada', 'orden'],
+          attributes: ['id', 'url', 'es_portada', 'orden'],
+          separate: true,
+          order: [['orden', 'ASC'], ['id', 'ASC']],
         },
       ],
+      order: [['creado_en', 'DESC']],
     });
 
     console.log('[getMisNegocios] encontrados:', negocios.length);
@@ -359,10 +362,6 @@ async function updateNegocio(req, res, next) {
     const negocio = await Negocio.findByPk(id);
     if (!negocio) {
       return error(res, 'Negocio no encontrado', 404);
-    }
-
-    if (negocio.propietario_id !== req.user.id && req.user.rol !== 'admin') {
-      return error(res, 'No tienes permisos para actualizar este negocio', 403);
     }
 
     await negocio.update({

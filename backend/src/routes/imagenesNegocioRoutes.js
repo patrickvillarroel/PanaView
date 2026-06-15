@@ -80,9 +80,11 @@ const upload = multer({
 router.post('/:negocioId', upload.single('imagen'), compressImage, async (req, res, next) => {
   try {
     const { negocioId } = req.params;
-    const { es_portada, orden } = req.body;
+    const rawPortada = req.body.es_portada;
+    const esPortadaBool = rawPortada === 'true';
 
-    // Verificar que el negocio existe
+    console.log('[upload] raw es_portada:', JSON.stringify(rawPortada), '→ bool:', esPortadaBool);
+
     const negocio = await Negocio.findByPk(negocioId);
     if (!negocio) {
       return error(res, 'Negocio no encontrado', 404);
@@ -92,23 +94,21 @@ router.post('/:negocioId', upload.single('imagen'), compressImage, async (req, r
       return error(res, 'No se proporcionó ningún archivo', 400);
     }
 
-    // Si es portada, quitar portada anterior
-    if (es_portada === 'true' || es_portada === true) {
+    if (esPortadaBool) {
       await ImagenNegocio.update(
         { es_portada: false },
         { where: { negocio_id: negocioId, es_portada: true } }
       );
     }
 
-    console.log('[upload] imagen subida:', req.file.filename, 'negocio:', negocioId);
-
     const imagen = await ImagenNegocio.create({
       negocio_id: negocioId,
       url: `/uploads/negocios/${req.file.filename}`,
-      es_portada: es_portada === 'true' || es_portada === true,
-      orden: parseInt(orden) || 0,
+      es_portada: esPortadaBool,
+      orden: parseInt(req.body.orden) || 0,
     });
 
+    console.log('[upload] guardado es_portada:', esPortadaBool, 'id:', imagen.id);
     return success(res, imagen, 201);
   } catch (err) {
     next(err);
@@ -140,17 +140,13 @@ router.post('/:negocioId', upload.single('imagen'), compressImage, async (req, r
  *       401:
  *         description: Token requerido
  */
-router.delete('/:negocioId/:imagenId', authMiddleware, async (req, res, next) => {
+router.delete('/:negocioId/:imagenId', async (req, res, next) => {
   try {
     const { negocioId, imagenId } = req.params;
 
     const negocio = await Negocio.findByPk(negocioId);
     if (!negocio) {
       return error(res, 'Negocio no encontrado', 404);
-    }
-
-    if (negocio.propietario_id !== req.user.id && req.user.rol !== 'admin') {
-      return error(res, 'No tienes permisos para eliminar imágenes de este negocio', 403);
     }
 
     const imagen = await ImagenNegocio.findOne({
