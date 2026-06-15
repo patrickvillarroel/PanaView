@@ -1637,7 +1637,6 @@ const styles = StyleSheet.create({
   },
   negocioCardAcciones: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
   },
   negocioCardBoton: {
