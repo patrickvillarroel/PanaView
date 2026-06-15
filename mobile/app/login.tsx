@@ -9,10 +9,11 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../hooks/useAuth';
-import { COLORES, ESPACIADO, TAMAÑOS, BORDES } from '../constants/config';
+import { COLORES, ESPACIADO, TAMAÑOS, BORDES, BASE_URL } from '../constants/config';
 import LoadingOverlay from '../components/LoadingOverlay';
 
 export default function LoginScreen() {
@@ -70,7 +71,8 @@ export default function LoginScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.titulo}>PanaRoute</Text>
+          <Image source={{ uri: `${BASE_URL}/uploads/logo/Panaviewlogo.jpeg` }} style={styles.logo} />
+          <Text style={styles.titulo}>PanaView</Text>
           <Text style={styles.subtitulo}>Descubre Panamá</Text>
         </View>
 
@@ -152,6 +154,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORES.primario,
     marginBottom: ESPACIADO.sm,
+  },
+  logo: {
+    width: 120,
+    height: 120,
+    resizeMode: 'contain',
+    marginBottom: ESPACIADO.md,
   },
   subtitulo: {
     fontSize: TAMAÑOS.fontoMedio,

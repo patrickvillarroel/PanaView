@@ -9,11 +9,12 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../hooks/useAuth';
-import { COLORES, ESPACIADO, TAMAÑOS, BORDES } from '../constants/config';
+import { COLORES, ESPACIADO, TAMAÑOS, BORDES, BASE_URL } from '../constants/config';
 import LoadingOverlay from '../components/LoadingOverlay';
 
 type RolId = 1 | 2;
@@ -100,6 +101,7 @@ export default function RegisterScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
+          <Image source={{ uri: `${BASE_URL}/uploads/logo/Panaviewlogo.jpeg` }} style={styles.logo} />
           <Text style={styles.titulo}>Crear Cuenta</Text>
           <Text style={styles.subtitulo}>Únete a la comunidad PanaRoute</Text>
         </View>
@@ -332,6 +334,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORES.primario,
     marginBottom: ESPACIADO.sm,
+  },
+  logo: {
+    width: 120,
+    height: 120,
+    resizeMode: 'contain',
+    marginBottom: ESPACIADO.md,
   },
   subtitulo: {
     fontSize: TAMAÑOS.fontoMedio,
