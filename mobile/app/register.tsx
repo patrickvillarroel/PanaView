@@ -10,6 +10,7 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../hooks/useAuth';
 import { COLORES, ESPACIADO, TAMAÑOS, BORDES } from '../constants/config';
@@ -27,6 +28,7 @@ export default function RegisterScreen() {
   const [cargando, setCargando] = useState(false);
   const [errores, setErrores] = useState<{ [key: string]: string }>({});
 
+  const insets = useSafeAreaInsets();
   const { register } = useAuth();
   const router = useRouter();
 
@@ -94,7 +96,7 @@ export default function RegisterScreen() {
       style={styles.contenedor}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + ESPACIADO.lg, paddingBottom: insets.bottom + ESPACIADO.lg }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
