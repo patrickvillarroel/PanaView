@@ -122,7 +122,9 @@ export default function PerfilScreen() {
 
     void cargarPerfil();
     void cargarCategorias();
-    void cargarMisNegocios();
+    if (usuario?.rol === 'negocio') {
+      void cargarMisNegocios();
+    }
   }, [isAuthenticated]);
 
   useEffect(() => {
@@ -525,6 +527,7 @@ export default function PerfilScreen() {
           ))}
         </View>
 
+        {perfilVisible?.rol === 'negocio' && (
         <View style={styles.seccionMisNegocios}>
             <View style={styles.seccionHeader}>
               <View style={styles.seccionHeaderIzq}>
@@ -611,6 +614,7 @@ export default function PerfilScreen() {
               })
             )}
         </View>
+        )}
 
         <View style={styles.seccionGuardados}>
           <View style={styles.seccionHeader}>
