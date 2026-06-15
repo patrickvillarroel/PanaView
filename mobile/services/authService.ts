@@ -5,6 +5,8 @@ interface RegisterPayload {
   nombre: string;
   email: string;
   password: string;
+  rol_id: number;
+  terminos_aceptados: boolean;
 }
 
 interface LoginPayload {

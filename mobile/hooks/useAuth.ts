@@ -9,7 +9,7 @@ interface UseAuthReturn {
   loading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (nombre: string, email: string, password: string) => Promise<void>;
+  register: (nombre: string, email: string, password: string, rol_id: number, terminos_aceptados: boolean) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -25,9 +25,9 @@ export function useAuth(): UseAuthReturn {
     }
   }, [contextLogin]);
 
-  const register = useCallback(async (nombre: string, email: string, password: string) => {
+  const register = useCallback(async (nombre: string, email: string, password: string, rol_id: number, terminos_aceptados: boolean) => {
     try {
-      const response = await authService.register({ nombre, email, password });
+      const response = await authService.register({ nombre, email, password, rol_id, terminos_aceptados });
       await contextLogin(response.token, response.usuario);
     } catch (error) {
       throw error;
