@@ -3,6 +3,30 @@ const { success, error } = require('../utils/responseHelper');
 const { calcularDistancia } = require('../utils/geoHelper');
 const { Op } = require('sequelize');
 
+// Crea o actualiza la imagen de portada de un lugar a partir de una URL.
+// Si la URL viene vacía/null, no hace nada (mantiene la portada actual).
+async function upsertPortadaLugar(lugarId, urlPortada) {
+  if (urlPortada === undefined || urlPortada === null) return;
+  const url = String(urlPortada).trim();
+  if (!url) return;
+
+  const portadaActual = await ImagenLugar.findOne({
+    where: { lugar_id: lugarId, es_portada: true },
+  });
+
+  if (portadaActual) {
+    portadaActual.url = url;
+    await portadaActual.save();
+  } else {
+    await ImagenLugar.create({
+      lugar_id: lugarId,
+      url,
+      es_portada: true,
+      orden: 0,
+    });
+  }
+}
+
 // Obtener lugares cercanos por geolocalización
 async function getLugaresCercanos(req, res, next) {
   try {
@@ -136,15 +160,40 @@ async function getLugarById(req, res, next) {
   }
 }
 
+// Listar todos los lugares (solo admin) — sin filtro geográfico
+async function getAllLugares(req, res, next) {
+  try {
+    const lugares = await Lugar.findAll({
+      include: [
+        {
+          model: CategoriaLugar,
+          as: 'categoria',
+          attributes: ['id', 'nombre', 'icono'],
+        },
+        {
+          model: ImagenLugar,
+          as: 'imagenes',
+          attributes: ['url', 'es_portada', 'orden'],
+        },
+      ],
+      order: [['creado_en', 'DESC']],
+    });
+
+    return success(res, lugares.map((l) => l.toJSON()));
+  } catch (err) {
+    next(err);
+  }
+}
+
 // Crear lugar (solo admin)
 async function createLugar(req, res, next) {
   try {
-    const { nombre, descripcion, historia, latitud, longitud, direccion, provincia, categoria_id } = req.body;
-    
+    const { nombre, descripcion, historia, latitud, longitud, direccion, provincia, categoria_id, audio_url, imagen_portada } = req.body;
+
     if (!nombre || !descripcion || !latitud || !longitud || !categoria_id) {
       return error(res, 'Faltan campos requeridos', 400);
     }
-    
+
     const lugar = await Lugar.create({
       nombre,
       descripcion,
@@ -153,9 +202,12 @@ async function createLugar(req, res, next) {
       longitud,
       direccion,
       provincia,
+      audio_url,
       categoria_id,
     });
-    
+
+    await upsertPortadaLugar(lugar.id, imagen_portada);
+
     return success(res, lugar, 201);
   } catch (err) {
     next(err);
@@ -166,25 +218,46 @@ async function createLugar(req, res, next) {
 async function updateLugar(req, res, next) {
   try {
     const { id } = req.params;
-    const { nombre, descripcion, historia, latitud, longitud, direccion, provincia, categoria_id } = req.body;
-    
+    const { nombre, descripcion, historia, latitud, longitud, direccion, provincia, categoria_id, audio_url, imagen_portada } = req.body;
+
     const lugar = await Lugar.findByPk(id);
     if (!lugar) {
       return error(res, 'Lugar no encontrado', 404);
     }
-    
+
     await lugar.update({
-      nombre: nombre || lugar.nombre,
-      descripcion: descripcion || lugar.descripcion,
-      historia: historia || lugar.historia,
-      latitud: latitud || lugar.latitud,
-      longitud: longitud || lugar.longitud,
-      direccion: direccion || lugar.direccion,
-      provincia: provincia || lugar.provincia,
-      categoria_id: categoria_id || lugar.categoria_id,
+      nombre: nombre ?? lugar.nombre,
+      descripcion: descripcion ?? lugar.descripcion,
+      historia: historia ?? lugar.historia,
+      latitud: latitud ?? lugar.latitud,
+      longitud: longitud ?? lugar.longitud,
+      direccion: direccion ?? lugar.direccion,
+      provincia: provincia ?? lugar.provincia,
+      audio_url: audio_url ?? lugar.audio_url,
+      categoria_id: categoria_id ?? lugar.categoria_id,
     });
-    
+
+    await upsertPortadaLugar(lugar.id, imagen_portada);
+
     return success(res, lugar);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Eliminar lugar (solo admin) — borra también sus imágenes por ON DELETE CASCADE
+async function deleteLugar(req, res, next) {
+  try {
+    const { id } = req.params;
+
+    const lugar = await Lugar.findByPk(id);
+    if (!lugar) {
+      return error(res, 'Lugar no encontrado', 404);
+    }
+
+    await lugar.destroy();
+
+    return success(res, { id, eliminado: true });
   } catch (err) {
     next(err);
   }
@@ -192,7 +265,9 @@ async function updateLugar(req, res, next) {
 
 module.exports = {
   getLugaresCercanos,
+  getAllLugares,
   getLugarById,
   createLugar,
   updateLugar,
+  deleteLugar,
 };

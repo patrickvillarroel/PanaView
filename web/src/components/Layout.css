@@ -1,0 +1,213 @@
+.layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ---------- Sidebar ---------- */
+.sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  background: linear-gradient(180deg, var(--brand-900), var(--brand-800) 55%, var(--brand-700));
+  color: #dce8f3;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 22px 22px 18px;
+}
+.brand-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
+  flex-shrink: 0;
+}
+.brand-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+.brand-sub {
+  font-size: 11px;
+  color: #8fb2d4;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.nav {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+.nav-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #6f97bd;
+  padding: 16px 12px 6px;
+}
+.nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 13px;
+  border-radius: 11px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #b9cee2;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.nav-item:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+.nav-item.active {
+  color: #fff;
+}
+.nav-active-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: 11px;
+  background: linear-gradient(135deg, rgba(90, 147, 204, 0.55), rgba(46, 117, 182, 0.35));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  z-index: 0;
+}
+.nav-item .nav-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+.nav-badge {
+  margin-left: auto;
+  background: #f0a020;
+  color: #3a2400;
+  font-size: 11px;
+  font-weight: 800;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+}
+
+.sidebar-footer {
+  padding: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+.user-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--brand-400), var(--brand-500));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.user-avatar--img {
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+.user-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.user-email {
+  font-size: 11.5px;
+  color: #8fb2d4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.logout-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: #cfe0f0;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.logout-btn:hover {
+  background: rgba(220, 38, 38, 0.16);
+  border-color: rgba(220, 38, 38, 0.4);
+  color: #ffd9d9;
+}
+
+/* ---------- Main ---------- */
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.topbar {
+  height: 64px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.topbar-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  flex: 1;
+}
+.content {
+  padding: 28px;
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+}
+

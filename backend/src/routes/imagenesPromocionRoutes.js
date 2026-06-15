@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const compressImage = require('../middlewares/compressImage');
 const { ImagenPromocion, Promocion, Negocio } = require('../models');
 const { success, error } = require('../utils/responseHelper');
 
@@ -40,7 +41,7 @@ const upload = multer({
 });
 
 // Subir imagen a una promoción
-router.post('/:promocionId', upload.single('imagen'), async (req, res, next) => {
+router.post('/:promocionId', upload.single('imagen'), compressImage, async (req, res, next) => {
   try {
     const { promocionId } = req.params;
     const { es_portada, orden } = req.body;

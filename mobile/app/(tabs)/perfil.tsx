@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
@@ -29,6 +30,12 @@ import { UsuarioPerfil, CategoriaNegocio, Negocio } from '../../types';
 
 const INTERESES_STORAGE_PREFIX = 'perfil-intereses:';
 
+const IMAGEN_ROL: Record<string, ReturnType<typeof require>> = {
+  turista: require('../../assets/turista.png'),
+  negocio: require('../../assets/propetario.png'),
+  admin:   require('../../assets/admin.png'),
+};
+
 const ETIQUETAS_ROL: Record<string, string[]> = {
   turista: ['Explorador local', 'Viajero'],
   negocio: ['Propietario', 'Negocio local'],
@@ -37,8 +44,6 @@ const ETIQUETAS_ROL: Record<string, string[]> = {
 
 const MENU_OPCIONES = [
   { icono: 'settings-outline' as const, label: 'Configuración de cuenta', action: 'editar' },
-  { icono: 'notifications-outline' as const, label: 'Notificaciones', action: 'configuracion' },
-  { icono: 'shield-checkmark-outline' as const, label: 'Privacidad y seguridad', action: 'configuracion' },
 ];
 
 function SinSesion() {
@@ -93,6 +98,21 @@ export default function PerfilScreen() {
   const [misNegocios, setMisNegocios] = useState<Negocio[]>([]);
   const [cargandoNegocios, setCargandoNegocios] = useState(false);
 
+  // Estado para editar negocio
+  const [modalEditarVisible, setModalEditarVisible] = useState(false);
+  const [negocioEditando, setNegocioEditando] = useState<Negocio | null>(null);
+  const [enviandoEdicion, setEnviandoEdicion] = useState(false);
+  const [formEditar, setFormEditar] = useState({
+    nombre: '',
+    descripcion: '',
+    categoria_id: '',
+    direccion: '',
+    telefono: '',
+    whatsapp: '',
+    horario: '',
+    sitio_web: '',
+  });
+
   // Estado para formulario de promoción
   const [modalPromoVisible, setModalPromoVisible] = useState(false);
   const [promoNegocioId, setPromoNegocioId] = useState('');
@@ -124,6 +144,15 @@ export default function PerfilScreen() {
     void cargarCategorias();
     void cargarMisNegocios();
   }, [isAuthenticated]);
+
+  // Refresca el estado de verificación cada vez que el tab recibe el foco
+  useFocusEffect(
+    React.useCallback(() => {
+      if (isAuthenticated) {
+        void cargarMisNegocios();
+      }
+    }, [isAuthenticated])
+  );
 
   useEffect(() => {
     if (perfilVisible?.id) {
@@ -258,10 +287,9 @@ export default function PerfilScreen() {
   function irAConfiguracion(action: string) {
     if (action === 'editar') {
       router.push('/perfil/editar');
-      return;
+    } else {
+      router.push('/perfil/configuracion');
     }
-
-    router.push('/perfil/configuracion');
   }
 
   function abrirFormularioNegocio() {
@@ -277,6 +305,54 @@ export default function PerfilScreen() {
     });
     setImagenesSeleccionadas([]);
     setModalNegocioVisible(true);
+  }
+
+  function abrirFormularioEditar(negocio: Negocio) {
+    setNegocioEditando(negocio);
+    setFormEditar({
+      nombre: negocio.nombre ?? '',
+      descripcion: negocio.descripcion ?? '',
+      categoria_id: String(negocio.categoria?.id ?? ''),
+      direccion: negocio.direccion ?? '',
+      telefono: negocio.telefono ?? '',
+      whatsapp: negocio.whatsapp ?? '',
+      horario: negocio.horario ?? '',
+      sitio_web: negocio.sitio_web ?? '',
+    });
+    setModalEditarVisible(true);
+  }
+
+  async function handleActualizarNegocio() {
+    if (!negocioEditando) return;
+    if (!formEditar.nombre.trim()) {
+      Alert.alert('Error', 'El nombre del negocio es requerido');
+      return;
+    }
+    if (!formEditar.categoria_id) {
+      Alert.alert('Error', 'Selecciona una categoría');
+      return;
+    }
+
+    setEnviandoEdicion(true);
+    try {
+      await negociosService.actualizarNegocio(negocioEditando.id, {
+        nombre: formEditar.nombre.trim(),
+        descripcion: formEditar.descripcion.trim() || undefined,
+        categoria_id: Number(formEditar.categoria_id) as any,
+        direccion: formEditar.direccion.trim() || undefined,
+        telefono: formEditar.telefono.trim() || undefined,
+        whatsapp: formEditar.whatsapp.trim() || undefined,
+        horario: formEditar.horario.trim() || undefined,
+        sitio_web: formEditar.sitio_web.trim() || undefined,
+      });
+      setModalEditarVisible(false);
+      Alert.alert('Guardado', 'La información de tu negocio ha sido actualizada.');
+      void cargarMisNegocios();
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'No se pudo actualizar el negocio');
+    } finally {
+      setEnviandoEdicion(false);
+    }
   }
 
   async function seleccionarImagen() {
@@ -443,7 +519,10 @@ export default function PerfilScreen() {
         contentContainerStyle={styles.scrollContenido}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refrescando} onRefresh={() => cargarPerfil(true)} />
+          <RefreshControl
+            refreshing={refrescando}
+            onRefresh={() => { void cargarPerfil(true); void cargarMisNegocios(); }}
+          />
         }
       >
         <View style={styles.hero}>
@@ -451,12 +530,10 @@ export default function PerfilScreen() {
             {perfilVisible?.foto_url ? (
               <Image source={{ uri: perfilVisible.foto_url }} style={styles.avatarImg} />
             ) : (
-              <LinearGradient
-                colors={[COLORES.secundario, COLORES.primario]}
-                style={styles.avatarGradiente}
-              >
-                <Text style={styles.avatarIniciales}>{iniciales}</Text>
-              </LinearGradient>
+              <Image
+                source={IMAGEN_ROL[perfilVisible?.rol ?? 'turista'] ?? IMAGEN_ROL.turista}
+                style={styles.avatarImg}
+              />
             )}
           </View>
 
@@ -525,15 +602,17 @@ export default function PerfilScreen() {
           ))}
         </View>
 
-        <View style={styles.seccionMisNegocios}>
+        {perfilVisible?.rol !== 'turista' && <View style={styles.seccionMisNegocios}>
             <View style={styles.seccionHeader}>
               <View style={styles.seccionHeaderIzq}>
                 <Ionicons name="storefront-outline" size={18} color={COLORES.primario} />
-                <Text style={styles.seccionTitulo}>Mis Negocios</Text>
+                <Text style={styles.seccionTitulo}>Mi Negocio</Text>
               </View>
-              <TouchableOpacity onPress={abrirFormularioNegocio}>
-                <Text style={styles.verTodo}>+ Registrar</Text>
-              </TouchableOpacity>
+              {misNegocios.length === 0 && (
+                <TouchableOpacity onPress={abrirFormularioNegocio}>
+                  <Text style={styles.verTodo}>+ Registrar</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {cargandoNegocios ? (
@@ -591,27 +670,36 @@ export default function PerfilScreen() {
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.negocioCardBoton}
-                        onPress={() => router.push(`/negocio/promociones?id=${negocio.id}`)}
+                        onPress={() => abrirFormularioEditar(negocio)}
                         activeOpacity={0.7}
                       >
-                        <Ionicons name="pricetag-outline" size={14} color={COLORES.primario} />
-                        <Text style={styles.negocioCardBotonTexto}>Promos</Text>
+                        <Ionicons name="create-outline" size={14} color={COLORES.primario} />
+                        <Text style={styles.negocioCardBotonTexto}>Editar</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={[styles.negocioCardBoton, styles.negocioCardBotonPrimario]}
+                        style={styles.negocioCardBoton}
                         onPress={() => abrirFormularioPromo(negocio.id, negocio.nombre)}
                         activeOpacity={0.7}
                       >
-                        <Ionicons name="add-circle-outline" size={14} color="#fff" />
-                        <Text style={[styles.negocioCardBotonTexto, { color: '#fff' }]}>Nueva promo</Text>
+                        <Ionicons name="add-circle-outline" size={14} color={COLORES.primario} />
+                        <Text style={styles.negocioCardBotonTexto}>Nueva promo</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.negocioCardBoton, styles.negocioCardBotonPrimario]}
+                        onPress={() => router.push('/negocio/escanerQR')}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="qr-code-outline" size={14} color="#fff" />
+                        <Text style={[styles.negocioCardBotonTexto, { color: '#fff' }]}>Canjear QR</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
                 );
               })
             )}
-        </View>
+        </View>}
 
+        {perfilVisible?.rol !== 'negocio' && (
         <View style={styles.seccionGuardados}>
           <View style={styles.seccionHeader}>
             <View style={styles.seccionHeaderIzq}>
@@ -644,6 +732,7 @@ export default function PerfilScreen() {
             </View>
           )}
         </View>
+        )}
 
         <TouchableOpacity style={styles.cerrarSesionFila} onPress={handleLogout} activeOpacity={0.7}>
           <Ionicons name="log-out-outline" size={20} color="#E53935" />
@@ -836,6 +925,131 @@ export default function PerfilScreen() {
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
                 <Text style={styles.modalNegocioBotonTexto}>Solicitar registro</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal transparent visible={modalEditarVisible} animationType="slide" onRequestClose={() => setModalEditarVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalNegocioCard}>
+            <View style={styles.modalNegocioHeader}>
+              <Text style={styles.modalNegocioTitulo}>Editar negocio</Text>
+              <TouchableOpacity onPress={() => setModalEditarVisible(false)}>
+                <Ionicons name="close" size={22} color={COLORES.textoBorrado} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalNegocioScroll} showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalNegocioLabel}>Nombre del negocio *</Text>
+              <TextInput
+                style={styles.modalNegocioInput}
+                placeholder="Ej. Restaurante El Buen Sabor"
+                placeholderTextColor={COLORES.textoBorrado}
+                value={formEditar.nombre}
+                onChangeText={(t) => setFormEditar({ ...formEditar, nombre: t })}
+              />
+
+              <Text style={styles.modalNegocioLabel}>Descripción</Text>
+              <TextInput
+                style={[styles.modalNegocioInput, styles.modalNegocioInputAltura]}
+                placeholder="Cuéntanos sobre tu negocio..."
+                placeholderTextColor={COLORES.textoBorrado}
+                value={formEditar.descripcion}
+                onChangeText={(t) => setFormEditar({ ...formEditar, descripcion: t })}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+
+              <Text style={styles.modalNegocioLabel}>Categoría *</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriasScroll}>
+                {categorias.map((cat) => (
+                  <TouchableOpacity
+                    key={cat.id}
+                    style={[
+                      styles.categoriaChip,
+                      formEditar.categoria_id === String(cat.id) && styles.categoriaChipActivo,
+                    ]}
+                    onPress={() => setFormEditar({ ...formEditar, categoria_id: String(cat.id) })}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[
+                      styles.categoriaChipTexto,
+                      formEditar.categoria_id === String(cat.id) && styles.categoriaChipTextoActivo,
+                    ]}>
+                      {cat.nombre}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <Text style={styles.modalNegocioLabel}>Dirección</Text>
+              <TextInput
+                style={styles.modalNegocioInput}
+                placeholder="Ej. Vía España, Albrook"
+                placeholderTextColor={COLORES.textoBorrado}
+                value={formEditar.direccion}
+                onChangeText={(t) => setFormEditar({ ...formEditar, direccion: t })}
+              />
+
+              <View style={styles.modalNegocioFila}>
+                <View style={styles.modalNegocioCampoMitad}>
+                  <Text style={styles.modalNegocioLabel}>Teléfono</Text>
+                  <TextInput
+                    style={styles.modalNegocioInput}
+                    placeholder="6030-1234"
+                    placeholderTextColor={COLORES.textoBorrado}
+                    value={formEditar.telefono}
+                    onChangeText={(t) => setFormEditar({ ...formEditar, telefono: t })}
+                    keyboardType="phone-pad"
+                  />
+                </View>
+                <View style={styles.modalNegocioCampoMitad}>
+                  <Text style={styles.modalNegocioLabel}>WhatsApp</Text>
+                  <TextInput
+                    style={styles.modalNegocioInput}
+                    placeholder="6030-1234"
+                    placeholderTextColor={COLORES.textoBorrado}
+                    value={formEditar.whatsapp}
+                    onChangeText={(t) => setFormEditar({ ...formEditar, whatsapp: t })}
+                    keyboardType="phone-pad"
+                  />
+                </View>
+              </View>
+
+              <Text style={styles.modalNegocioLabel}>Horario</Text>
+              <TextInput
+                style={styles.modalNegocioInput}
+                placeholder="Ej. Lun-Dom 11:00-22:00"
+                placeholderTextColor={COLORES.textoBorrado}
+                value={formEditar.horario}
+                onChangeText={(t) => setFormEditar({ ...formEditar, horario: t })}
+              />
+
+              <Text style={styles.modalNegocioLabel}>Sitio web (opcional)</Text>
+              <TextInput
+                style={styles.modalNegocioInput}
+                placeholder="https://..."
+                placeholderTextColor={COLORES.textoBorrado}
+                value={formEditar.sitio_web}
+                onChangeText={(t) => setFormEditar({ ...formEditar, sitio_web: t })}
+                keyboardType="url"
+                autoCapitalize="none"
+              />
+            </ScrollView>
+
+            <TouchableOpacity
+              style={[styles.modalNegocioBoton, enviandoEdicion && { opacity: 0.7 }]}
+              onPress={handleActualizarNegocio}
+              disabled={enviandoEdicion}
+              activeOpacity={0.85}
+            >
+              {enviandoEdicion ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.modalNegocioBotonTexto}>Guardar cambios</Text>
               )}
             </TouchableOpacity>
           </View>

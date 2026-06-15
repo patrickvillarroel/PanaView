@@ -12,9 +12,6 @@ module.exports = (sequelize, DataTypes) => {
     url: {
       type: DataTypes.STRING(500),
       allowNull: false,
-      validate: {
-        isUrl: true,
-      },
     },
     es_portada: {
       type: DataTypes.BOOLEAN,

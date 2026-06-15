@@ -16,6 +16,7 @@ import QRCode from 'react-native-qrcode-svg';
 import PromocionesService from '../../services/promocionesService';
 import { Promocion } from '../../types';
 import LoadingOverlay from '../../components/LoadingOverlay';
+import { useAuth } from '../../context/AuthContext';
 import { COLORES, ESPACIADO, TAMAÑOS, BORDES, BASE_URL } from '../../constants/config';
 
 const { width: ANCHO } = Dimensions.get('window');
@@ -23,6 +24,7 @@ const { width: ANCHO } = Dimensions.get('window');
 export default function PromocionDetalle() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { usuario } = useAuth();
   const [promo, setPromo] = useState<Promocion | null>(null);
   const [cargando, setCargando] = useState(true);
   const [mostrarQR, setMostrarQR] = useState(false);
@@ -48,15 +50,7 @@ export default function PromocionDetalle() {
     setMostrarQR(!mostrarQR);
   };
 
-  const handleRedeem = async () => {
-    if (!promo) return;
-    try {
-      await PromocionesService.redeemById(promo.id);
-      Alert.alert('Éxito', 'Promoción registrada correctamente');
-    } catch (err) {
-      Alert.alert('Error', 'No se pudo registrar la promoción');
-    }
-  };
+  const qrValue = promo && usuario ? `PANAVIEW:${promo.id}:${usuario.id}` : null;
 
   if (cargando) {
     return <LoadingOverlay visible mensaje="Cargando promoción..." />;
@@ -180,32 +174,16 @@ export default function PromocionDetalle() {
           </LinearGradient>
         </TouchableOpacity>
 
-        {mostrarQR && (
+        {mostrarQR && qrValue && (
           <View style={styles.qrContainer}>
             <View style={styles.qrMarco}>
-              <QRCode value={promo.qr_codigo} size={180} color={COLORES.primario} />
+              <QRCode value={qrValue} size={180} color={COLORES.primario} />
             </View>
             <Text style={styles.qrInstruccion}>
-              Presenta este código para canjear la promoción
+              Presenta este código al negocio para canjear la promoción
             </Text>
           </View>
         )}
-
-        <TouchableOpacity
-          style={styles.botonCanjear}
-          activeOpacity={0.85}
-          onPress={handleRedeem}
-        >
-          <LinearGradient
-            colors={[COLORES.exito, '#2a9d6e']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.botonCanjearGradiente}
-          >
-            <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
-            <Text style={styles.botonCanjearTexto}>Marcar como canjeado</Text>
-          </LinearGradient>
-        </TouchableOpacity>
       </View>
 
       <View style={{ height: 40 }} />

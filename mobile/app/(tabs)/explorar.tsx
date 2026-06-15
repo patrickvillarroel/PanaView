@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
+  Alert,
   Image,
   Linking,
   ScrollView,
@@ -15,10 +15,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import lugaresService from '../../services/lugaresService';
-import { Lugar } from '../../types';
-import { COLORES } from '../../constants/config';
+import negociosService from '../../services/negociosService';
+import favoritosService from '../../services/favoritosService';
+import authService from '../../services/authService';
+import { useAuth } from '../../context/AuthContext';
+import { Lugar, Negocio } from '../../types';
+import { COLORES, BASE_URL } from '../../constants/config';
 
-const RADIO = 5000;
+const RADIO = 2000;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -32,7 +36,8 @@ function distanciaTexto(metros?: number) {
 function imagenPortada(lugar: Lugar): string | null {
   if (!lugar.imagenes?.length) return null;
   const portada = lugar.imagenes.find((i) => i.es_portada) ?? lugar.imagenes[0];
-  return portada?.url ?? null;
+  if (!portada?.url) return null;
+  return portada.url.startsWith('http') ? portada.url : `${BASE_URL}${portada.url}`;
 }
 
 const GRADIENTES: [string, string][] = [
@@ -48,11 +53,13 @@ const GRADIENTES: [string, string][] = [
 interface TarjetaLugarProps {
   lugar: Lugar;
   indice: number;
+  esFavorito: boolean;
   onDetalles: (id: string) => void;
   onRuta: (lat: number, lng: number) => void;
+  onToggleFavorito: (id: string) => void;
 }
 
-function TarjetaLugar({ lugar, indice, onDetalles, onRuta }: TarjetaLugarProps) {
+function TarjetaLugar({ lugar, indice, esFavorito, onDetalles, onRuta, onToggleFavorito }: TarjetaLugarProps) {
   const img = imagenPortada(lugar);
   const dist = distanciaTexto(lugar.distancia_metros);
   const gradiente = GRADIENTES[indice % GRADIENTES.length];
@@ -76,8 +83,12 @@ function TarjetaLugar({ lugar, indice, onDetalles, onRuta }: TarjetaLugarProps) 
         )}
 
         {/* Guardar */}
-        <TouchableOpacity style={styles.btnGuardar}>
-          <Ionicons name="heart-outline" size={16} color="#fff" />
+        <TouchableOpacity style={styles.btnGuardar} onPress={() => onToggleFavorito(lugar.id)}>
+          <Ionicons
+            name={esFavorito ? 'heart' : 'heart-outline'}
+            size={16}
+            color={esFavorito ? '#EF4444' : '#fff'}
+          />
         </TouchableOpacity>
       </View>
 
@@ -117,43 +128,149 @@ function TarjetaLugar({ lugar, indice, onDetalles, onRuta }: TarjetaLugarProps) 
   );
 }
 
+function imagenNegocio(negocio: Negocio): string | null {
+  if (!negocio.imagenes?.length) return null;
+  const portada = negocio.imagenes.find((i) => i.es_portada) ?? negocio.imagenes[0];
+  if (!portada?.url) return null;
+  return portada.url.startsWith('http') ? portada.url : `${BASE_URL}${portada.url}`;
+}
+
+interface TarjetaNegocioProps {
+  negocio: Negocio;
+  indice: number;
+  onVer: (id: string) => void;
+  onRuta: (lat: number, lng: number) => void;
+}
+
+function TarjetaNegocio({ negocio, indice, onVer, onRuta }: TarjetaNegocioProps) {
+  const img = imagenNegocio(negocio);
+  const dist = distanciaTexto(negocio.distancia_metros);
+  const gradiente = GRADIENTES[indice % GRADIENTES.length];
+
+  return (
+    <View style={styles.tarjeta}>
+      <View style={styles.tarjetaImagenWrap}>
+        {img ? (
+          <Image source={{ uri: img }} style={styles.tarjetaImagen} resizeMode="cover" />
+        ) : (
+          <LinearGradient colors={gradiente} style={styles.tarjetaImagen} />
+        )}
+        {dist && (
+          <View style={styles.badgeDistancia}>
+            <Ionicons name="navigate-outline" size={10} color="#fff" />
+            <Text style={styles.badgeDistanciaTexto}>{dist}</Text>
+          </View>
+        )}
+        <View style={styles.badgeNegocio}>
+          <Ionicons name="storefront-outline" size={11} color="#fff" />
+          <Text style={styles.badgeNegocioTexto}>Negocio</Text>
+        </View>
+      </View>
+      <View style={styles.tarjetaInfo}>
+        <Text style={styles.tarjetaNombre} numberOfLines={1}>{negocio.nombre}</Text>
+        <Text style={styles.tarjetaCategoria} numberOfLines={1}>{negocio.categoria?.nombre ?? 'Negocio local'}</Text>
+        {(negocio.calificacion_promedio ?? 0) > 0 && (
+          <View style={styles.ratingRow}>
+            <Ionicons name="star" size={12} color="#F59E0B" />
+            <Text style={styles.ratingTexto}>{negocio.calificacion_promedio!.toFixed(1)}</Text>
+            <Text style={styles.ratingTotal}>({negocio.total_resenas ?? 0})</Text>
+          </View>
+        )}
+        <View style={styles.tarjetaAcciones}>
+          <TouchableOpacity style={styles.btnDetalles} onPress={() => onVer(negocio.id)} activeOpacity={0.75}>
+            <Text style={styles.btnDetallesTexto}>Ver negocio</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.btnRuta}
+            onPress={() => onRuta(Number(negocio.latitud), Number(negocio.longitud))}
+            activeOpacity={0.75}
+          >
+            <Ionicons name="navigate" size={14} color="#fff" />
+            <Text style={styles.btnRutaTexto}>Ruta</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 // ─── Pantalla principal ──────────────────────────────────────────────────────
 
 export default function ExplorarScreen() {
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
   const [lugares, setLugares] = useState<Lugar[]>([]);
+  const [negocios, setNegocios] = useState<Negocio[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sinPermiso, setSinPermiso] = useState(false);
   const [categoriaActiva, setCategoriaActiva] = useState('Todos');
+  const [favoritosIds, setFavoritosIds] = useState<Set<string>>(new Set());
   const coordsRef = useRef<{ lat: number; lng: number } | null>(null);
 
   const cargarLugares = useCallback(async (lat: number, lng: number) => {
     setCargando(true);
     setError(null);
     try {
-      const data = await lugaresService.getLugaresCercanos(lat, lng, RADIO);
-      setLugares(data);
+      const [lugaresData, negociosData] = await Promise.all([
+        lugaresService.getLugaresCercanos(lat, lng, RADIO),
+        negociosService.getNegociosCercanos(lat, lng, RADIO),
+      ]);
+      setLugares(lugaresData);
+      setNegocios(negociosData);
     } catch {
-      setError('No se pudieron cargar los lugares. Intenta de nuevo.');
+      setError('No se pudieron cargar los resultados. Intenta de nuevo.');
     } finally {
       setCargando(false);
     }
   }, []);
 
-  useEffect(() => {
-    (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== Location.PermissionStatus.GRANTED) {
-        // Sin permiso: cargar con coordenadas de Panamá City
-        await cargarLugares(8.9936, -79.5197);
-        return;
-      }
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      const { latitude: lat, longitude: lng } = loc.coords;
-      coordsRef.current = { lat, lng };
-      await cargarLugares(lat, lng);
-    })();
+  const iniciarUbicacion = useCallback(async () => {
+    setSinPermiso(false);
+    setCargando(true);
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== Location.PermissionStatus.GRANTED) {
+      setSinPermiso(true);
+      setCargando(false);
+      return;
+    }
+    const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+    const { latitude: lat, longitude: lng } = loc.coords;
+    coordsRef.current = { lat, lng };
+    await cargarLugares(lat, lng);
   }, [cargarLugares]);
+
+  useEffect(() => {
+    iniciarUbicacion();
+  }, [iniciarUbicacion]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setFavoritosIds(new Set());
+      return;
+    }
+    void authService.getMe()
+      .then((perfil) => setFavoritosIds(new Set(perfil.favoritos?.map((f) => f.id) ?? [])))
+      .catch(() => {});
+  }, [isAuthenticated]);
+
+  const handleToggleFavorito = useCallback(async (lugarId: string) => {
+    if (!isAuthenticated) {
+      Alert.alert('Inicia sesión', 'Debes iniciar sesión para guardar lugares.');
+      return;
+    }
+    try {
+      const esFav = await favoritosService.toggleFavorito(lugarId);
+      setFavoritosIds((prev) => {
+        const next = new Set(prev);
+        if (esFav) next.add(lugarId);
+        else next.delete(lugarId);
+        return next;
+      });
+    } catch {
+      Alert.alert('Error', 'No se pudo actualizar el favorito.');
+    }
+  }, [isAuthenticated]);
 
   // Categorías únicas derivadas de los datos
   const categorias = ['Todos', ...Array.from(
@@ -173,6 +290,12 @@ export default function ExplorarScreen() {
   const abrirDetalles = (id: string) => {
     router.push(`/lugar/${id}`);
   };
+
+  const abrirNegocio = (id: string) => {
+    router.push(`/negocio/detalleNegocio?id=${id}`);
+  };
+
+  const hayResultados = lugaresFiltrados.length > 0 || negocios.length > 0;
 
   return (
     <View style={styles.contenedor}>
@@ -213,7 +336,18 @@ export default function ExplorarScreen() {
       {cargando ? (
         <View style={styles.centrado}>
           <ActivityIndicator size="large" color={COLORES.primario} />
-          <Text style={styles.cargandoTexto}>Buscando lugares…</Text>
+          <Text style={styles.cargandoTexto}>Buscando lugares cercanos…</Text>
+        </View>
+      ) : sinPermiso ? (
+        <View style={styles.centrado}>
+          <Ionicons name="location-outline" size={56} color={COLORES.textoBorrado} />
+          <Text style={styles.vacioTitulo}>Ubicación necesaria</Text>
+          <Text style={styles.vacioSubtitulo}>
+            Activa el acceso a tu ubicación para descubrir lugares cercanos a ti.
+          </Text>
+          <TouchableOpacity style={styles.btnReintentar} onPress={iniciarUbicacion}>
+            <Text style={styles.btnReintentarTexto}>Permitir ubicación</Text>
+          </TouchableOpacity>
         </View>
       ) : error ? (
         <View style={styles.centrado}>
@@ -221,31 +355,57 @@ export default function ExplorarScreen() {
           <Text style={styles.errorTexto}>{error}</Text>
           <TouchableOpacity
             style={styles.btnReintentar}
-            onPress={() => coordsRef.current && cargarLugares(coordsRef.current.lat, coordsRef.current.lng)}
+            onPress={() => coordsRef.current
+              ? cargarLugares(coordsRef.current.lat, coordsRef.current.lng)
+              : iniciarUbicacion()
+            }
           >
             <Text style={styles.btnReintentarTexto}>Reintentar</Text>
           </TouchableOpacity>
         </View>
-      ) : lugaresFiltrados.length === 0 ? (
+      ) : !hayResultados ? (
         <View style={styles.centrado}>
           <Ionicons name="location-outline" size={56} color={COLORES.acento} />
-          <Text style={styles.vacioTexto}>Sin lugares en esta categoría</Text>
+          <Text style={styles.vacioTitulo}>Sin resultados cercanos</Text>
+          <Text style={styles.vacioSubtitulo}>No encontramos nada en un radio de {RADIO / 1000} km.</Text>
         </View>
       ) : (
-        <FlatList
-          data={lugaresFiltrados}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item, index }) => (
-            <TarjetaLugar
-              lugar={item}
-              indice={index}
-              onDetalles={abrirDetalles}
-              onRuta={abrirRuta}
-            />
-          )}
-          contentContainerStyle={styles.lista}
+        <ScrollView
           showsVerticalScrollIndicator={false}
-        />
+          contentContainerStyle={styles.lista}
+        >
+          {lugaresFiltrados.length > 0 && (
+            <>
+              <Text style={styles.seccionLabel}>Lugares turísticos</Text>
+              {lugaresFiltrados.map((item, index) => (
+                <TarjetaLugar
+                  key={item.id}
+                  lugar={item}
+                  indice={index}
+                  esFavorito={favoritosIds.has(item.id)}
+                  onDetalles={abrirDetalles}
+                  onRuta={abrirRuta}
+                  onToggleFavorito={handleToggleFavorito}
+                />
+              ))}
+            </>
+          )}
+
+          {negocios.length > 0 && (
+            <>
+              <Text style={styles.seccionLabel}>Negocios cercanos</Text>
+              {negocios.map((item, index) => (
+                <TarjetaNegocio
+                  key={item.id}
+                  negocio={item}
+                  indice={index}
+                  onVer={abrirNegocio}
+                  onRuta={abrirRuta}
+                />
+              ))}
+            </>
+          )}
+        </ScrollView>
       )}
     </View>
   );
@@ -316,6 +476,15 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 32,
   },
+  seccionLabel: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: COLORES.textoBorrado,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 10,
+    marginTop: 4,
+  },
 
   // Tarjeta
   tarjeta: {
@@ -364,6 +533,38 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.35)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  badgeNegocio: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  badgeNegocioTexto: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginBottom: 8,
+  },
+  ratingTexto: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1A1F36',
+  },
+  ratingTotal: {
+    fontSize: 12,
+    color: COLORES.textoBorrado,
   },
 
   // Info
@@ -433,7 +634,8 @@ const styles = StyleSheet.create({
   },
   cargandoTexto: { fontSize: 14, color: COLORES.textoBorrado },
   errorTexto: { fontSize: 14, color: COLORES.textoBorrado, textAlign: 'center' },
-  vacioTexto: { fontSize: 15, color: COLORES.textoBorrado, fontWeight: '600' },
+  vacioTitulo: { fontSize: 16, color: '#1A1F36', fontWeight: '700', textAlign: 'center' },
+  vacioSubtitulo: { fontSize: 13, color: COLORES.textoBorrado, textAlign: 'center', lineHeight: 19 },
   btnReintentar: {
     backgroundColor: COLORES.primario,
     paddingVertical: 10,

@@ -79,18 +79,41 @@ exports.redeemById = async (req, res, next) => {
   }
 };
 
-// Redeem by QR code
+// Redeem by QR code — formato: PANAVIEW:{promo_id}:{usuario_id}
 exports.redeemByQR = async (req, res, next) => {
   try {
-    const { qr_codigo } = req.body;
-    const usuarioId = req.user?.id || null;
-    const promo = await Promocion.findOne({ where: { qr_codigo, activo: true } });
-    if (!promo) return error(res, 'Código QR no válido', 404);
-    await req.app.get('sequelize').query(
-      'INSERT INTO compras_promociones (promocion_id, usuario_id, qr_codigo, metodo) VALUES (?, ?, ?, ?)',
-      { replacements: [promo.id, usuarioId, qr_codigo, 'app'] }
+    const { qr_value } = req.body;
+    if (!qr_value) return error(res, 'Código QR requerido', 400);
+
+    const partes = String(qr_value).split(':');
+    if (partes.length !== 3 || partes[0] !== 'PANAVIEW') {
+      return error(res, 'Código QR no válido', 400);
+    }
+    const [, promoId, usuarioId] = partes;
+
+    const promo = await Promocion.findByPk(promoId);
+    if (!promo || !promo.activo) return error(res, 'Promoción no disponible o expirada', 404);
+
+    const sequelize = req.app.get('sequelize');
+
+    // Verificar si ya fue canjeado por este usuario
+    const [existente] = await sequelize.query(
+      'SELECT id FROM compras_promociones WHERE promocion_id = ? AND usuario_id = ?',
+      { replacements: [promoId, usuarioId] }
     );
-    return success(res, { message: 'Promoción registrada mediante QR' });
+    if (existente.length > 0) {
+      return error(res, 'Esta promoción ya fue canjeada por este cliente', 409);
+    }
+
+    await sequelize.query(
+      'INSERT INTO compras_promociones (promocion_id, usuario_id, qr_codigo, metodo) VALUES (?, ?, ?, ?)',
+      { replacements: [promoId, usuarioId, promo.qr_codigo, 'qr_scan'] }
+    );
+
+    return success(res, {
+      message: 'Promoción canjeada exitosamente',
+      promo: { id: promo.id, nombre: promo.nombre },
+    });
   } catch (err) {
     next(err);
   }

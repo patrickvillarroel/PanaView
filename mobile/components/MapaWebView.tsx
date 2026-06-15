@@ -80,6 +80,7 @@ const MAPA_HTML = `
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <style>
     @keyframes markerBounce {
       0%   { transform: translateY(-24px) scale(0.75); opacity: 0; }
@@ -351,25 +352,22 @@ const MAPA_HTML = `
       }
 
       function iconoCategoria(lugar) {
-        var icono = lugar && lugar.categoria && lugar.categoria.icono ? lugar.categoria.icono : '';
-        // Solo usar el icono del backend si es un emoji real (primer char no-ASCII → surrogate pair o plano básico alto)
-        if (icono && icono.charCodeAt(0) > 255) return icono;
         var nombre = (categoriaNombre(lugar) || '').toLowerCase();
-        if (nombre.indexOf('historia') > -1 || nombre.indexOf('cultura') > -1) return '🏛';
-        if (nombre.indexOf('naturaleza') > -1) return '🌿';
-        if (nombre.indexOf('playa') > -1) return '🏖';
-        if (nombre.indexOf('religio') > -1) return '⛪';
-        if (nombre.indexOf('mirador') > -1 || nombre.indexOf('vista') > -1) return '🔭';
-        if (nombre.indexOf('museo') > -1) return '🖼';
-        if (nombre.indexOf('gastron') > -1 || nombre.indexOf('restaur') > -1 || nombre.indexOf('comida') > -1) return '🍽';
-        if (nombre.indexOf('metro') > -1) return '🚇';
-        if (nombre.indexOf('transport') > -1) return '🚌';
-        if (nombre.indexOf('educaci') > -1) return '🎓';
-        if (nombre.indexOf('caf') > -1) return '☕';
-        if (nombre.indexOf('hosped') > -1 || nombre.indexOf('hotel') > -1) return '🏨';
-        if (nombre.indexOf('artesani') > -1 || nombre.indexOf('souvenir') > -1) return '🎨';
-        if (nombre.indexOf('entretenimiento') > -1 || nombre.indexOf('tour') > -1) return '🎭';
-        return '📍';
+        if (nombre.indexOf('historia') > -1 || nombre.indexOf('cultura') > -1) return 'fa-landmark';
+        if (nombre.indexOf('naturaleza') > -1) return 'fa-tree';
+        if (nombre.indexOf('playa') > -1) return 'fa-umbrella-beach';
+        if (nombre.indexOf('religio') > -1) return 'fa-church';
+        if (nombre.indexOf('mirador') > -1 || nombre.indexOf('vista') > -1) return 'fa-binoculars';
+        if (nombre.indexOf('museo') > -1) return 'fa-building-columns';
+        if (nombre.indexOf('gastron') > -1 || nombre.indexOf('restaur') > -1 || nombre.indexOf('comida') > -1) return 'fa-utensils';
+        if (nombre.indexOf('metro') > -1) return 'fa-train-subway';
+        if (nombre.indexOf('transport') > -1) return 'fa-bus';
+        if (nombre.indexOf('educaci') > -1) return 'fa-graduation-cap';
+        if (nombre.indexOf('caf') > -1) return 'fa-mug-hot';
+        if (nombre.indexOf('hosped') > -1 || nombre.indexOf('hotel') > -1) return 'fa-bed';
+        if (nombre.indexOf('artesani') > -1 || nombre.indexOf('souvenir') > -1) return 'fa-palette';
+        if (nombre.indexOf('entretenimiento') > -1 || nombre.indexOf('tour') > -1) return 'fa-masks-theater';
+        return 'fa-location-dot';
       }
 
       function normalizarLugar(lugar) {
@@ -407,24 +405,21 @@ const MAPA_HTML = `
       }
 
       function crearHtmlMarcador(lugar, color, delay) {
-        var icono = iconoCategoria(lugar);
+        var iconClass = iconoCategoria(lugar);
         var nombre = lugar.nombre || '';
         var nombreCorto = nombre.length > 16 ? nombre.slice(0, 14) + '…' : nombre;
         return '<div style="' +
           'display:flex;flex-direction:column;align-items:center;' +
           'animation:markerBounce 400ms cubic-bezier(.2,.8,.25,1) ' + delay + 'ms both' +
           '">' +
-          // Etiqueta de nombre (estilos base en .marker-label, color dinámico inline)
           '<div class="marker-label" style="color:' + color + '">' + escapeHtml(nombreCorto) + '</div>' +
-          // Círculo del icono
           '<div style="' +
           'width:40px;height:40px;border-radius:50%;' +
           'background:' + color + ';border:3px solid #fff;' +
           'box-shadow:0 4px 14px rgba(0,0,0,.30);' +
           'display:flex;align-items:center;justify-content:center;' +
-          'font-size:18px;box-sizing:border-box' +
-          '">' + icono + '</div>' +
-          // Sombra oval en el suelo
+          'box-sizing:border-box' +
+          '"><i class="fa-solid ' + iconClass + '" style="color:#fff;font-size:15px;pointer-events:none"></i></div>' +
           '<div style="' +
           'width:44px;height:10px;border-radius:50%;' +
           'background:rgba(0,0,0,0.18);filter:blur(4px);' +

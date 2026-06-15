@@ -6,52 +6,44 @@ import {
   Image,
   StyleSheet,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 
-interface AppHeaderProps {
-  onMenuPress?: () => void;
-}
+const IMAGEN_ROL: Record<string, ReturnType<typeof require>> = {
+  turista: require('../assets/turista.png'),
+  negocio: require('../assets/propetario.png'),
+  admin:   require('../assets/admin.png'),
+};
 
-export default function AppHeader({ onMenuPress }: AppHeaderProps) {
+export default function AppHeader() {
   const { usuario } = useAuth();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
-  const iniciales = usuario?.nombre
-    ? usuario.nombre
-        .split(' ')
-        .filter(Boolean)
-        .map((p) => p[0])
-        .join('')
-        .slice(0, 2)
-        .toUpperCase()
-    : '?';
+  const rolImagen = IMAGEN_ROL[usuario?.rol ?? 'turista'] ?? IMAGEN_ROL.turista;
 
   return (
     <View style={[styles.contenedor, { paddingTop: insets.top + 8 }]}>
-      {/* Hamburger */}
-      <TouchableOpacity
-        style={styles.botonMenu}
-        onPress={onMenuPress}
-        activeOpacity={0.7}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
-        <Ionicons name="menu" size={26} color="#202124" />
-      </TouchableOpacity>
+      {/* Espaciador izquierdo para centrar el título */}
+      <View style={styles.lado} />
 
-      {/* Título */}
+      {/* Título centrado */}
       <Text style={styles.titulo}>PanaView</Text>
 
-      {/* Avatar */}
-      <View style={styles.avatarContenedor}>
-        {usuario?.foto_url ? (
-          <Image source={{ uri: usuario.foto_url }} style={styles.avatarImg} />
-        ) : (
-          <View style={styles.avatarFallback}>
-            <Text style={styles.avatarTexto}>{iniciales}</Text>
-          </View>
-        )}
+      {/* Avatar → navega al perfil */}
+      <View style={styles.lado}>
+        <TouchableOpacity
+          onPress={() => router.push('/(tabs)/perfil')}
+          activeOpacity={0.8}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          {usuario?.foto_url ? (
+            <Image source={{ uri: usuario.foto_url }} style={styles.avatarImg} />
+          ) : (
+            <Image source={rolImagen} style={styles.avatarImg} />
+          )}
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -72,11 +64,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  botonMenu: {
+  lado: {
     width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'flex-end',
   },
   titulo: {
     flex: 1,
@@ -86,32 +76,11 @@ const styles = StyleSheet.create({
     color: '#1F4E79',
     letterSpacing: -0.2,
   },
-  avatarContenedor: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   avatarImg: {
     width: 36,
     height: 36,
     borderRadius: 18,
     borderWidth: 2,
     borderColor: '#D6E4F0',
-  },
-  avatarFallback: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#1F4E79',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#D6E4F0',
-  },
-  avatarTexto: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '800',
   },
 });

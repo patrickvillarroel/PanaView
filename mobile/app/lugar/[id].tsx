@@ -11,17 +11,19 @@ import {
   Alert,
   Dimensions,
   FlatList,
+  Linking,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Lugar, Resena } from '../../types';
 import lugaresService from '../../services/lugaresService';
 import favoritosService from '../../services/favoritosService';
 import authService from '../../services/authService';
 import resenasService from '../../services/resenasService';
 import { useAuth } from '../../context/AuthContext';
-import { COLORES, ESPACIADO, TAMAÑOS, BORDES } from '../../constants/config';
+import { COLORES, ESPACIADO, TAMAÑOS, BORDES, BASE_URL } from '../../constants/config';
 import LoadingOverlay from '../../components/LoadingOverlay';
 import StarRating from '../../components/StarRating';
 
@@ -65,9 +67,12 @@ function SeccionTexto({ titulo, texto }: { titulo: string; texto: string }) {
   );
 }
 
+const BAR_ALTO = 72;
+
 export default function LugarDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { isAuthenticated } = useAuth();
 
   const [lugar, setLugar] = useState<Lugar | null>(null);
@@ -176,7 +181,8 @@ export default function LugarDetailScreen() {
   }
 
   const imagenes = lugar.imagenes ?? [];
-  const portada = imagenes.find((i) => i.es_portada)?.url ?? imagenes[0]?.url;
+  const toUrl = (url?: string) => url ? (url.startsWith('http') ? url : `${BASE_URL}${url}`) : undefined;
+  const portada = toUrl(imagenes.find((i) => i.es_portada)?.url ?? imagenes[0]?.url);
   const galeria = imagenes.filter((i) => !i.es_portada && i.url);
 
   const distanciaTexto =
@@ -186,9 +192,19 @@ export default function LugarDetailScreen() {
         : `${(lugar.distancia_metros / 1000).toFixed(1)} km`
       : null;
 
+  const abrirRuta = () => {
+    if (!lugar.latitud || !lugar.longitud) return;
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${lugar.latitud},${lugar.longitud}&travelmode=walking`;
+    void Linking.openURL(url);
+  };
+
   return (
     <>
-      <ScrollView style={styles.contenedor} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.contenedor}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: BAR_ALTO + insets.bottom + 16 }}
+      >
         {/* ── HERO ─────────────────────────────────────────────── */}
         <View style={styles.hero}>
           {portada ? (
@@ -205,12 +221,12 @@ export default function LugarDetailScreen() {
             style={styles.heroGradiente}
           />
 
-          <TouchableOpacity style={styles.botonAtras} onPress={() => router.back()}>
+          <TouchableOpacity style={[styles.botonAtras, { top: insets.top + 8 }]} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={21} color="#fff" />
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.botonFavorito}
+            style={[styles.botonFavorito, { top: insets.top + 8 }]}
             onPress={handleToggleFavorito}
             disabled={guardando || cargandoFavorito}
           >
@@ -315,7 +331,7 @@ export default function LugarDetailScreen() {
                 keyExtractor={(_, i) => String(i)}
                 contentContainerStyle={{ gap: 10 }}
                 renderItem={({ item }) => (
-                  <Image source={{ uri: item.url }} style={styles.galeriaImg} />
+                  <Image source={{ uri: toUrl(item.url) }} style={styles.galeriaImg} />
                 )}
               />
             </View>
@@ -369,9 +385,37 @@ export default function LugarDetailScreen() {
             )}
           </View>
 
-          <View style={{ height: ESPACIADO.xxl * 2 }} />
         </View>
       </ScrollView>
+
+      {/* ── BARRA DE ACCIONES STICKY ─────────────────────────── */}
+      <View style={[styles.barraAcciones, { paddingBottom: Math.max(insets.bottom, 14) }]}>
+        <TouchableOpacity
+          style={styles.botonCompartir}
+          onPress={() => {
+            if (!isAuthenticated) {
+              Alert.alert('Inicia sesión', 'Debes iniciar sesión para escribir una reseña.');
+              return;
+            }
+            setModalResena(true);
+          }}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="chatbubble-outline" size={20} color={COLORES.primario} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.botonRuta} onPress={abrirRuta} activeOpacity={0.85}>
+          <LinearGradient
+            colors={[COLORES.primario, COLORES.secundario]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.botonRutaInner}
+          >
+            <Ionicons name="navigate" size={18} color="#fff" />
+            <Text style={styles.botonRutaTexto}>Cómo llegar</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
 
       {/* ── MODAL NUEVA RESEÑA ────────────────────────────────── */}
       <Modal visible={modalResena} transparent statusBarTranslucent animationType="slide">
@@ -386,7 +430,7 @@ export default function LugarDetailScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.modalBody}>
+            <View style={[styles.modalBody, { paddingBottom: Math.max(insets.bottom, ESPACIADO.xl) }]}>
               <Text style={styles.modalLabel}>Calificación</Text>
               <StarRating value={calificacion} onChange={setCalificacion} size={36} />
 
@@ -462,7 +506,6 @@ const styles = StyleSheet.create({
   },
   botonAtras: {
     position: 'absolute',
-    top: 44,
     left: 16,
     width: 38,
     height: 38,
@@ -473,7 +516,6 @@ const styles = StyleSheet.create({
   },
   botonFavorito: {
     position: 'absolute',
-    top: 44,
     right: 16,
     width: 38,
     height: 38,
@@ -673,7 +715,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORES.fondo,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    paddingBottom: ESPACIADO.xxl,
+    paddingBottom: 8,
   },
   modalHandle: {
     width: 40,
@@ -727,6 +769,52 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   botonPublicarTexto: {
+    color: '#fff',
+    fontSize: TAMAÑOS.fontoMedio,
+    fontWeight: '700',
+  },
+
+  // ── Barra sticky acciones ──────────────────────────────────
+  barraAcciones: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: ESPACIADO.lg,
+    paddingTop: 12,
+    gap: ESPACIADO.md,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E8EAED',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  botonCompartir: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: COLORES.acento,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  botonRuta: {
+    flex: 1,
+    borderRadius: 23,
+    overflow: 'hidden',
+  },
+  botonRutaInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 13,
+    gap: 8,
+  },
+  botonRutaTexto: {
     color: '#fff',
     fontSize: TAMAÑOS.fontoMedio,
     fontWeight: '700',

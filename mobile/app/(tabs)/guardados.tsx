@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { COLORES } from '../../constants/config';
@@ -35,11 +35,15 @@ export default function GuardadosScreen() {
   useEffect(() => {
     if (!isAuthenticated) {
       setPerfil(null);
-      return;
     }
-
-    void cargarGuardados();
   }, [isAuthenticated]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isAuthenticated) return;
+      void cargarGuardados();
+    }, [isAuthenticated])
+  );
 
   const cargarGuardados = async (pullToRefresh = false) => {
     try {

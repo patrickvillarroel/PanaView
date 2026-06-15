@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const authMiddleware = require('../middlewares/authMiddleware');
+const compressImage = require('../middlewares/compressImage');
 const { ImagenNegocio, Negocio } = require('../models');
 const { success, error } = require('../utils/responseHelper');
 
@@ -76,7 +77,7 @@ const upload = multer({
  *       401:
  *         description: Token requerido
  */
-router.post('/:negocioId', upload.single('imagen'), async (req, res, next) => {
+router.post('/:negocioId', upload.single('imagen'), compressImage, async (req, res, next) => {
   try {
     const { negocioId } = req.params;
     const { es_portada, orden } = req.body;

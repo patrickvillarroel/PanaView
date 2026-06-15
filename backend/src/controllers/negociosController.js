@@ -1,7 +1,30 @@
-const { Negocio, CategoriaNegocio, ImagenNegocio, ResenaNegocio, Promocion, ImagenPromocion, sequelize } = require('../models');
+const { Negocio, CategoriaNegocio, ImagenNegocio, ResenaNegocio, Promocion, ImagenPromocion, Usuario, sequelize } = require('../models');
 const { success, error } = require('../utils/responseHelper');
 const { calcularDistancia } = require('../utils/geoHelper');
 const { fn, col, literal } = require('sequelize');
+
+// Crea o actualiza la imagen de portada de un negocio a partir de una URL.
+async function upsertPortadaNegocio(negocioId, urlPortada) {
+  if (urlPortada === undefined || urlPortada === null) return;
+  const url = String(urlPortada).trim();
+  if (!url) return;
+
+  const portadaActual = await ImagenNegocio.findOne({
+    where: { negocio_id: negocioId, es_portada: true },
+  });
+
+  if (portadaActual) {
+    portadaActual.url = url;
+    await portadaActual.save();
+  } else {
+    await ImagenNegocio.create({
+      negocio_id: negocioId,
+      url,
+      es_portada: true,
+      orden: 0,
+    });
+  }
+}
 
 // Obtener categorías de negocios
 async function getCategoriasNegocio(req, res, next) {
@@ -33,9 +56,9 @@ async function getNegociosCercanos(req, res, next) {
       return error(res, 'Parámetros de geolocalización inválidos', 400);
     }
 
-    // Obtener todos los negocios activos con imágenes
+    // Obtener todos los negocios activos y verificados con imágenes
     const negocios = await Negocio.findAll({
-      where: { activo: true },
+      where: { activo: true, verificado: true },
       include: [
         {
           model: CategoriaNegocio,
@@ -151,6 +174,85 @@ async function getNegocioById(req, res, next) {
   }
 }
 
+// Listar todos los negocios (solo admin) — sin filtro geográfico.
+// Soporta ?verificado=0|1 para separar solicitudes pendientes de negocios aprobados.
+async function getAllNegocios(req, res, next) {
+  try {
+    const { verificado } = req.query;
+    const where = {};
+
+    if (verificado === '0' || verificado === 'false') {
+      where.verificado = false;
+    } else if (verificado === '1' || verificado === 'true') {
+      where.verificado = true;
+    }
+
+    const negocios = await Negocio.findAll({
+      where,
+      include: [
+        {
+          model: CategoriaNegocio,
+          as: 'categoria',
+          attributes: ['id', 'nombre', 'icono'],
+        },
+        {
+          model: ImagenNegocio,
+          as: 'imagenes',
+          attributes: ['url', 'es_portada', 'orden'],
+        },
+        {
+          model: Usuario,
+          as: 'propietario',
+          attributes: ['id', 'nombre', 'email'],
+        },
+      ],
+      order: [['creado_en', 'DESC']],
+    });
+
+    return success(res, negocios.map((n) => n.toJSON()));
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Verificar / des-verificar un negocio (solo admin) — aprobar solicitudes
+async function verifyNegocio(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { verificado } = req.body;
+
+    const negocio = await Negocio.findByPk(id);
+    if (!negocio) {
+      return error(res, 'Negocio no encontrado', 404);
+    }
+
+    negocio.verificado = verificado === undefined ? true : Boolean(verificado);
+    await negocio.save();
+
+    return success(res, { id, verificado: negocio.verificado });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Eliminar negocio (solo admin)
+async function deleteNegocio(req, res, next) {
+  try {
+    const { id } = req.params;
+
+    const negocio = await Negocio.findByPk(id);
+    if (!negocio) {
+      return error(res, 'Negocio no encontrado', 404);
+    }
+
+    await negocio.destroy();
+
+    return success(res, { id, eliminado: true });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // Obtener negocios del propietario autenticado
 async function getMisNegocios(req, res, next) {
   try {
@@ -202,12 +304,20 @@ async function getMisNegocios(req, res, next) {
 // Crear negocio (cualquier usuario autenticado)
 async function createNegocio(req, res, next) {
   try {
-    const { nombre, descripcion, latitud, longitud, direccion, telefono, whatsapp, horario, sitio_web, categoria_id, categoria } = req.body;
+    const { nombre, descripcion, latitud, longitud, direccion, telefono, whatsapp, horario, sitio_web, categoria_id, categoria, verificado, imagen_portada } = req.body;
 
     const resolvedCategoriaId = categoria_id || categoria?.id;
 
     if (!nombre || !latitud || !longitud || !resolvedCategoriaId) {
       return error(res, 'Faltan campos requeridos', 400);
+    }
+
+    // Un propietario solo puede tener un negocio registrado
+    if (req.user.rol !== 'admin') {
+      const negocioExistente = await Negocio.findOne({ where: { propietario_id: req.user.id } });
+      if (negocioExistente) {
+        return error(res, 'Ya tienes un negocio registrado. Solo se permite uno por propietario.', 400);
+      }
     }
 
     const negocio = await Negocio.create({
@@ -221,8 +331,12 @@ async function createNegocio(req, res, next) {
       horario,
       sitio_web,
       categoria_id: resolvedCategoriaId,
+      // Un admin puede crear el negocio ya verificado; un propietario entra como pendiente
+      verificado: req.user.rol === 'admin' ? Boolean(verificado) : false,
       propietario_id: req.user.id,
     });
+
+    await upsertPortadaNegocio(negocio.id, imagen_portada);
 
     // Si el usuario es turista, actualizarlo a negocio
     if (req.user.rol === 'turista') {
@@ -240,7 +354,7 @@ async function createNegocio(req, res, next) {
 async function updateNegocio(req, res, next) {
   try {
     const { id } = req.params;
-    const { nombre, descripcion, latitud, longitud, direccion, telefono, whatsapp, horario, sitio_web, categoria_id } = req.body;
+    const { nombre, descripcion, latitud, longitud, direccion, telefono, whatsapp, horario, sitio_web, categoria_id, imagen_portada } = req.body;
 
     const negocio = await Negocio.findByPk(id);
     if (!negocio) {
@@ -252,17 +366,19 @@ async function updateNegocio(req, res, next) {
     }
 
     await negocio.update({
-      nombre: nombre || negocio.nombre,
-      descripcion: descripcion || negocio.descripcion,
-      latitud: latitud || negocio.latitud,
-      longitud: longitud || negocio.longitud,
-      direccion: direccion || negocio.direccion,
-      telefono: telefono || negocio.telefono,
-      whatsapp: whatsapp || negocio.whatsapp,
-      horario: horario || negocio.horario,
-      sitio_web: sitio_web || negocio.sitio_web,
-      categoria_id: categoria_id || negocio.categoria_id,
+      nombre: nombre ?? negocio.nombre,
+      descripcion: descripcion ?? negocio.descripcion,
+      latitud: latitud ?? negocio.latitud,
+      longitud: longitud ?? negocio.longitud,
+      direccion: direccion ?? negocio.direccion,
+      telefono: telefono ?? negocio.telefono,
+      whatsapp: whatsapp ?? negocio.whatsapp,
+      horario: horario ?? negocio.horario,
+      sitio_web: sitio_web ?? negocio.sitio_web,
+      categoria_id: categoria_id ?? negocio.categoria_id,
     });
+
+    await upsertPortadaNegocio(negocio.id, imagen_portada);
 
     return success(res, negocio);
   } catch (err) {
@@ -274,7 +390,10 @@ module.exports = {
   getCategoriasNegocio,
   getMisNegocios,
   getNegociosCercanos,
+  getAllNegocios,
   getNegocioById,
   createNegocio,
   updateNegocio,
+  verifyNegocio,
+  deleteNegocio,
 };

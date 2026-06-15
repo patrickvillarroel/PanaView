@@ -17,8 +17,12 @@ class PromocionesService {
     return resp.data.data!;
   }
 
-  async redeemByQR(qr: string): Promise<void> {
-    await api.post('/promociones/redeem-by-qr', { qr_codigo: qr });
+  async redeemByQR(qrValue: string): Promise<{ message: string; promo: { id: string; nombre: string } }> {
+    const resp = await api.post<ApiResponse<{ message: string; promo: { id: string; nombre: string } }>>(
+      '/promociones/redeem-by-qr',
+      { qr_value: qrValue }
+    );
+    return resp.data.data!;
   }
 
   async redeemById(id: string): Promise<void> {

@@ -15,6 +15,7 @@ const favoritosNegociosRoutes = require('./src/routes/favoritosNegociosRoutes');
 const imagenesNegocioRoutes = require('./src/routes/imagenesNegocioRoutes');
 const resenasNegociosRoutes = require('./src/routes/resenasNegociosRoutes');
 const imagenesPromocionRoutes = require('./src/routes/imagenesPromocionRoutes');
+const imagenesLugarRoutes = require('./src/routes/imagenesLugarRoutes');
 const errorMiddleware = require('./src/middlewares/errorMiddleware');
 
 const app = express();
@@ -69,6 +70,7 @@ app.use('/api/favoritos-negocios', favoritosNegociosRoutes);
 app.use('/api/imagenes-negocio', imagenesNegocioRoutes);
 app.use('/api/resenas-negocios', resenasNegociosRoutes);
 app.use('/api/imagenes-promocion', imagenesPromocionRoutes);
+app.use('/api/imagenes-lugar', imagenesLugarRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

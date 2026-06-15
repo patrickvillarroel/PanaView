@@ -3,7 +3,7 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { LugarFavoritoResumen } from '../types';
-import { COLORES } from '../constants/config';
+import { COLORES, BASE_URL } from '../constants/config';
 
 interface FavoritoCardProps {
   lugar: LugarFavoritoResumen;
@@ -11,6 +11,9 @@ interface FavoritoCardProps {
 }
 
 export default function FavoritoCard({ lugar, onPress }: FavoritoCardProps) {
+  const imgPortada = lugar.imagen_portada
+    ? lugar.imagen_portada.startsWith('http') ? lugar.imagen_portada : `${BASE_URL}${lugar.imagen_portada}`
+    : null;
   const iniciales = lugar.nombre
     .split(' ')
     .map((parte) => parte[0])
@@ -24,8 +27,8 @@ export default function FavoritoCard({ lugar, onPress }: FavoritoCardProps) {
 
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={onPress}>
-      {lugar.imagen_portada ? (
-        <Image source={{ uri: lugar.imagen_portada }} style={styles.imagen} />
+      {imgPortada ? (
+        <Image source={{ uri: imgPortada }} style={styles.imagen} />
       ) : (
         <LinearGradient
           colors={[COLORES.secundario, COLORES.primario]}

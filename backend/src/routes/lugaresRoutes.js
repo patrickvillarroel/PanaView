@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
 const roleMiddleware = require('../middlewares/roleMiddleware');
-const { getLugaresCercanos, getLugarById, createLugar, updateLugar } = require('../controllers/lugaresController');
+const { getLugaresCercanos, getAllLugares, getLugarById, createLugar, updateLugar, deleteLugar } = require('../controllers/lugaresController');
 
 /**
  * @swagger
@@ -56,6 +56,9 @@ const { getLugaresCercanos, getLugarById, createLugar, updateLugar } = require('
  *         description: Latitud y longitud son requeridas
  */
 router.get('/', getLugaresCercanos);
+
+// Listado completo para el panel de administración (debe ir antes de /:id)
+router.get('/admin/todos', authMiddleware, roleMiddleware('admin'), getAllLugares);
 
 /**
  * @swagger
@@ -137,5 +140,27 @@ router.post('/', authMiddleware, roleMiddleware('admin'), createLugar);
  *         description: Lugar no encontrado
  */
 router.put('/:id', authMiddleware, roleMiddleware('admin'), updateLugar);
+
+/**
+ * @swagger
+ * /api/lugares/{id}:
+ *   delete:
+ *     summary: Eliminar un lugar (solo admin)
+ *     tags: [Lugares]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Lugar eliminado
+ *       404:
+ *         description: Lugar no encontrado
+ */
+router.delete('/:id', authMiddleware, roleMiddleware('admin'), deleteLugar);
 
 module.exports = router;

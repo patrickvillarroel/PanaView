@@ -15,6 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import LoadingOverlay from '../../components/LoadingOverlay';
 import { COLORES } from '../../constants/config';
@@ -23,6 +24,7 @@ import authService from '../../services/authService';
 export default function EditarPerfilScreen() {
   const { usuario, setUsuario, logout } = useAuth();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const [nombre, setNombre] = useState('');
   const [fotoUrl, setFotoUrl] = useState('');
@@ -90,7 +92,7 @@ export default function EditarPerfilScreen() {
       style={styles.contenedor}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.contenido} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.contenido, { paddingTop: insets.top + 16 }]} showsVerticalScrollIndicator={false}>
         <TouchableOpacity style={styles.volver} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={20} color={COLORES.primario} />
           <Text style={styles.volverTexto}>Volver</Text>

@@ -4,7 +4,7 @@ const { Usuario, Lugar, CategoriaLugar, ImagenLugar } = require('../models');
 const { success, error } = require('../utils/responseHelper');
 
 function formatearFavorito(lugar) {
-  const data = lugar.toJSON();
+  const data = typeof lugar.toJSON === 'function' ? lugar.toJSON() : lugar;
   const imagenPortada = data.imagenes?.find((imagen) => imagen.es_portada)?.url
     ?? data.imagenes?.[0]?.url
     ?? null;

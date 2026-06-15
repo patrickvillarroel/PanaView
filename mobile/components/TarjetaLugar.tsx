@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Lugar } from '../types';
-import { COLORES, TAMAÑOS, ESPACIADO, BORDES } from '../constants/config';
+import { COLORES, TAMAÑOS, ESPACIADO, BORDES, BASE_URL } from '../constants/config';
 import StarRating from './StarRating';
 
 interface TarjetaLugarProps {
@@ -17,7 +17,8 @@ interface TarjetaLugarProps {
 }
 
 const TarjetaLugar: React.FC<TarjetaLugarProps> = ({ lugar, onPress }) => {
-  const imagenPortada = lugar.imagenes?.find((img) => img.es_portada)?.url;
+  const rawUrl = lugar.imagenes?.find((img) => img.es_portada)?.url ?? lugar.imagenes?.[0]?.url;
+  const imagenPortada = rawUrl ? (rawUrl.startsWith('http') ? rawUrl : `${BASE_URL}${rawUrl}`) : undefined;
 
   return (
     <TouchableOpacity style={styles.tarjeta} onPress={onPress} activeOpacity={0.7}>

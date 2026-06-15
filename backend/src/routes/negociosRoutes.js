@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
-const { getCategoriasNegocio, getMisNegocios, getNegociosCercanos, getNegocioById, createNegocio, updateNegocio } = require('../controllers/negociosController');
+const roleMiddleware = require('../middlewares/roleMiddleware');
+const { getCategoriasNegocio, getMisNegocios, getNegociosCercanos, getAllNegocios, getNegocioById, createNegocio, updateNegocio, verifyNegocio, deleteNegocio } = require('../controllers/negociosController');
 
 /**
  * @swagger
@@ -45,6 +46,9 @@ router.get('/', getNegociosCercanos);
 
 // Obtener categorías de negocios (público)
 router.get('/categorias', getCategoriasNegocio);
+
+// Listado completo para el panel de administración (?verificado=0|1)
+router.get('/admin/todos', authMiddleware, roleMiddleware('admin'), getAllNegocios);
 
 // Obtener negocios del propietario autenticado
 router.get('/mis-negocios', (req, res, next) => {
@@ -127,5 +131,49 @@ router.post('/', authMiddleware, createNegocio);
  *         description: Negocio no encontrado
  */
 router.put('/:id', authMiddleware, updateNegocio);
+
+/**
+ * @swagger
+ * /api/negocios/{id}/verificar:
+ *   patch:
+ *     summary: Verificar o rechazar un negocio (solo admin)
+ *     tags: [Negocios]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Estado de verificación actualizado
+ *       404:
+ *         description: Negocio no encontrado
+ */
+router.patch('/:id/verificar', authMiddleware, roleMiddleware('admin'), verifyNegocio);
+
+/**
+ * @swagger
+ * /api/negocios/{id}:
+ *   delete:
+ *     summary: Eliminar un negocio (solo admin)
+ *     tags: [Negocios]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Negocio eliminado
+ *       404:
+ *         description: Negocio no encontrado
+ */
+router.delete('/:id', authMiddleware, roleMiddleware('admin'), deleteNegocio);
 
 module.exports = router;
