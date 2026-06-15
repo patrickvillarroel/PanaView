@@ -5,6 +5,7 @@ import {
   MapPin,
   Store,
   ClipboardCheck,
+  Receipt,
   LogOut,
 } from 'lucide-react';
 import { PendingProvider, usePending } from './PendingContext';
@@ -18,6 +19,7 @@ const NAV = [
   { to: '/lugares', label: 'Lugares', icon: MapPin, end: false },
   { to: '/negocios', label: 'Negocios', icon: Store, end: false },
   { to: '/solicitudes', label: 'Solicitudes', icon: ClipboardCheck, end: false },
+  { to: '/facturacion', label: 'Facturación', icon: Receipt, end: false },
 ];
 
 const TITLES: Record<string, string> = {
@@ -25,6 +27,7 @@ const TITLES: Record<string, string> = {
   '/lugares': 'Lugares',
   '/negocios': 'Negocios',
   '/solicitudes': 'Solicitudes',
+  '/facturacion': 'Facturación',
 };
 
 function Sidebar({ onNavigate }: { onNavigate: () => void }) {

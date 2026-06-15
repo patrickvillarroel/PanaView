@@ -17,6 +17,8 @@ const HistorialVisita = require('./HistorialVisita');
 const ResenaNegocio = require('./ResenaNegocio');
 const ImagenPromocion = require('./ImagenPromocion');
 const Promocion = require('./Promocion');
+const CompraPromocion = require('./CompraPromocion');
+const CicloFacturacion = require('./CicloFacturacion');
 
 // Inicializar modelos
 const role = Role(sequelize, DataTypes);
@@ -34,6 +36,8 @@ const historialVisita = HistorialVisita(sequelize, DataTypes);
 const resenaNegocio = ResenaNegocio(sequelize, DataTypes);
 const imagenPromocion = ImagenPromocion(sequelize, DataTypes);
 const promocion = Promocion(sequelize, DataTypes);
+const compraPromocion = CompraPromocion(sequelize, DataTypes);
+const cicloFacturacion = CicloFacturacion(sequelize, DataTypes);
 
 // Definir asociaciones
 // Role -> Usuario
@@ -96,6 +100,22 @@ promocion.belongsTo(negocio, { foreignKey: 'negocio_id', as: 'negocio' });
 promocion.hasMany(imagenPromocion, { foreignKey: 'promocion_id', as: 'imagenes' });
 imagenPromocion.belongsTo(promocion, { foreignKey: 'promocion_id' });
 
+// Promocion -> CompraPromocion
+promocion.hasMany(compraPromocion, { foreignKey: 'promocion_id', as: 'compras' });
+compraPromocion.belongsTo(promocion, { foreignKey: 'promocion_id', as: 'promocion' });
+
+// Usuario -> CompraPromocion
+usuario.hasMany(compraPromocion, { foreignKey: 'usuario_id', as: 'compras' });
+compraPromocion.belongsTo(usuario, { foreignKey: 'usuario_id', as: 'usuario' });
+
+// Negocio -> CicloFacturacion
+negocio.hasMany(cicloFacturacion, { foreignKey: 'negocio_id', as: 'ciclos' });
+cicloFacturacion.belongsTo(negocio, { foreignKey: 'negocio_id', as: 'negocio' });
+
+// CicloFacturacion -> CompraPromocion
+cicloFacturacion.hasMany(compraPromocion, { foreignKey: 'ciclo_id', as: 'compras' });
+compraPromocion.belongsTo(cicloFacturacion, { foreignKey: 'ciclo_id', as: 'ciclo' });
+
 module.exports = {
   sequelize,
   Role: role,
@@ -113,4 +133,6 @@ module.exports = {
   HistorialVisita: historialVisita,
   ImagenPromocion: imagenPromocion,
   Promocion: promocion,
+  CompraPromocion: compraPromocion,
+  CicloFacturacion: cicloFacturacion,
 };

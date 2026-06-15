@@ -16,6 +16,7 @@ const imagenesNegocioRoutes = require('./src/routes/imagenesNegocioRoutes');
 const resenasNegociosRoutes = require('./src/routes/resenasNegociosRoutes');
 const imagenesPromocionRoutes = require('./src/routes/imagenesPromocionRoutes');
 const imagenesLugarRoutes = require('./src/routes/imagenesLugarRoutes');
+const facturacionRoutes = require('./src/routes/facturacionRoutes');
 const errorMiddleware = require('./src/middlewares/errorMiddleware');
 
 const app = express();
@@ -71,6 +72,7 @@ app.use('/api/imagenes-negocio', imagenesNegocioRoutes);
 app.use('/api/resenas-negocios', resenasNegociosRoutes);
 app.use('/api/imagenes-promocion', imagenesPromocionRoutes);
 app.use('/api/imagenes-lugar', imagenesLugarRoutes);
+app.use('/api/facturacion', facturacionRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

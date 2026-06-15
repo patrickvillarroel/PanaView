@@ -684,18 +684,22 @@ export default function PerfilScreen() {
                         <Ionicons name="add-circle-outline" size={14} color={COLORES.primario} />
                         <Text style={styles.negocioCardBotonTexto}>Nueva promo</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.negocioCardBoton, styles.negocioCardBotonPrimario]}
-                        onPress={() => router.push('/negocio/escanerQR')}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons name="qr-code-outline" size={14} color="#fff" />
-                        <Text style={[styles.negocioCardBotonTexto, { color: '#fff' }]}>Canjear QR</Text>
-                      </TouchableOpacity>
                     </View>
                   </View>
                 );
               })
+            )}
+
+            {misNegocios.length > 0 && (
+              <TouchableOpacity
+                style={styles.botonFacturacion}
+                onPress={() => router.push(`/negocio/facturacion?negocioId=${misNegocios[0].id}`)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="receipt-outline" size={18} color="#059669" />
+                <Text style={styles.botonFacturacionTexto}>Ver Facturación</Text>
+                <Ionicons name="chevron-forward" size={16} color="#059669" style={{ marginLeft: 'auto' }} />
+              </TouchableOpacity>
             )}
         </View>}
 
@@ -1758,5 +1762,50 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     marginTop: 4,
+  },
+  botonFacturacion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#F0FDF4',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    marginTop: 12,
+  },
+  botonFacturacionTexto: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  adminBoton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E8EAED',
+  },
+  adminBotonIcono: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#EEF4FB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  adminBotonTitulo: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1A1A2E',
+  },
+  adminBotonDesc: {
+    fontSize: 12,
+    color: '#9AA0A6',
+    marginTop: 2,
   },
 });

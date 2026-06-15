@@ -77,6 +77,14 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: DataTypes.NOW,
       onUpdate: DataTypes.NOW,
     },
+    comision_porcentaje: {
+      type: DataTypes.DECIMAL(5, 2),
+      defaultValue: 10.00,
+    },
+    tipo_ciclo: {
+      type: DataTypes.ENUM('quincenal', 'mensual'),
+      defaultValue: 'mensual',
+    },
   }, {
     tableName: 'negocios',
     timestamps: false,

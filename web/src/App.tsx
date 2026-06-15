@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import Lugares from './pages/Lugares';
 import Negocios from './pages/Negocios';
 import Solicitudes from './pages/Solicitudes';
+import Facturacion from './pages/Facturacion';
 
 function FullScreenLoader() {
   return (
@@ -62,6 +63,7 @@ export default function App() {
           <Route path="/lugares" element={<Lugares />} />
           <Route path="/negocios" element={<Negocios />} />
           <Route path="/solicitudes" element={<Solicitudes />} />
+          <Route path="/facturacion" element={<Facturacion />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

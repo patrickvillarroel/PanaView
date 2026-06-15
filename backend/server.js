@@ -12,7 +12,7 @@ async function startServer() {
     console.log('✓ Conexión a la base de datos exitosa');
     
     // Sincronizar modelos (crear tablas si no existen)
-    // Nota: En producción, usar migrations en lugar de sync
+    // En producción usar el script: scripts/migrate_facturacion.sql
     // await sequelize.sync({ alter: true });
     console.log('✓ Modelos sincronizados');
     
