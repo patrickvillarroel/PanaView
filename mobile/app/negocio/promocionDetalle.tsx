@@ -16,6 +16,8 @@ import QRCode from 'react-native-qrcode-svg';
 import PromocionesService from '../../services/promocionesService';
 import { Promocion } from '../../types';
 import LoadingOverlay from '../../components/LoadingOverlay';
+import AppHeader from '../../components/AppHeader';
+import SimpleBottomNav from '../../components/SimpleBottomNav';
 import { COLORES, ESPACIADO, TAMAÑOS, BORDES, BASE_URL } from '../../constants/config';
 
 const { width: ANCHO } = Dimensions.get('window');
@@ -64,12 +66,16 @@ export default function PromocionDetalle() {
 
   if (!promo) {
     return (
-      <View style={styles.errorContainer}>
-        <Ionicons name="alert-circle-outline" size={48} color={COLORES.error} />
-        <Text style={styles.errorTexto}>No se pudo cargar la promoción</Text>
-        <TouchableOpacity style={styles.botonVolver} onPress={() => router.back()}>
-          <Text style={styles.botonVolverTexto}>Volver</Text>
-        </TouchableOpacity>
+      <View style={{ flex: 1 }}>
+        <AppHeader />
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color={COLORES.error} />
+          <Text style={styles.errorTexto}>No se pudo cargar la promoción</Text>
+          <TouchableOpacity style={styles.botonVolver} onPress={() => router.back()}>
+            <Text style={styles.botonVolverTexto}>Volver</Text>
+          </TouchableOpacity>
+        </View>
+        <SimpleBottomNav activeTab="explorar" />
       </View>
     );
   }
@@ -92,7 +98,9 @@ export default function PromocionDetalle() {
   const precio = `$${Number(promo.precio).toFixed(2)}`;
 
   return (
-    <ScrollView style={styles.contenedor} showsVerticalScrollIndicator={false}>
+    <View style={{ flex: 1 }}>
+      <AppHeader />
+      <ScrollView style={styles.contenedor} showsVerticalScrollIndicator={false}>
       <View style={styles.hero}>
         {promo.imagenes?.[0]?.url ? (
           <Image source={{ uri: `${BASE_URL}${promo.imagenes[0].url}` }} style={styles.heroImagen} />
@@ -210,6 +218,8 @@ export default function PromocionDetalle() {
 
       <View style={{ height: 40 }} />
     </ScrollView>
+    <SimpleBottomNav activeTab="explorar" />
+    </View>
   );
 }
 
@@ -258,7 +268,7 @@ const styles = StyleSheet.create({
   },
   botonAtras: {
     position: 'absolute',
-    top: 44,
+    top: 12,
     left: 16,
     width: 38,
     height: 38,

@@ -17,6 +17,19 @@ class PromocionesService {
     return resp.data.data!;
   }
 
+  async actualizar(id: string, payload: Partial<Promocion>): Promise<Promocion> {
+    const resp = await api.put<ApiResponse<Promocion>>(`/promociones/${id}`, payload);
+    return resp.data.data!;
+  }
+
+  async eliminar(id: string): Promise<void> {
+    await api.delete(`/promociones/${id}`);
+  }
+
+  async eliminarImagen(promocionId: string, imagenId: number): Promise<void> {
+    await api.delete(`/imagenes-promocion/${promocionId}/${imagenId}`);
+  }
+
   async redeemByQR(qr: string): Promise<void> {
     await api.post('/promociones/redeem-by-qr', { qr_codigo: qr });
   }
