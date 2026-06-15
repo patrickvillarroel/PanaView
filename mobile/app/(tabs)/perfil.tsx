@@ -36,9 +36,9 @@ const ETIQUETAS_ROL: Record<string, string[]> = {
 };
 
 const MENU_OPCIONES = [
-  { icono: 'settings-outline' as const, label: 'Configuración de cuenta', action: 'editar' },
+  { icono: 'settings-outline' as const, label: 'Configuración de Cuenta', action: 'editar' },
   { icono: 'notifications-outline' as const, label: 'Notificaciones', action: 'configuracion' },
-  { icono: 'shield-checkmark-outline' as const, label: 'Privacidad y seguridad', action: 'configuracion' },
+  { icono: 'shield-checkmark-outline' as const, label: 'Privacidad y Seguridad', action: 'configuracion' },
 ];
 
 function SinSesion() {
@@ -109,7 +109,7 @@ export default function PerfilScreen() {
   });
   const [imagenPromoUri, setImagenPromoUri] = useState<string | null>(null);
 
-  const perfilVisible: UsuarioPerfil | null = perfil ?? (usuario ? { ...usuario, favoritos: [] } : null);
+  const perfilVisible: UsuarioPerfil | null = perfil ?? (usuario ? { ...usuario, favoritos: [], negociosFavoritos: [] } : null);
   const iniciales = perfilVisible?.nombre
     ? perfilVisible.nombre.split(' ').map((parte) => parte[0]).join('').slice(0, 2).toUpperCase()
     : '?';
@@ -507,7 +507,7 @@ export default function PerfilScreen() {
         <View style={styles.hero}>
           <View style={styles.avatarWrap}>
             {perfilVisible?.foto_url ? (
-              <Image source={{ uri: perfilVisible.foto_url }} style={styles.avatarImg} />
+              <Image source={{ uri: perfilVisible.foto_url.startsWith('/uploads/') ? `${BASE_URL}${perfilVisible.foto_url}` : perfilVisible.foto_url }} style={styles.avatarImg} />
             ) : (
               <LinearGradient
                 colors={[COLORES.secundario, COLORES.primario]}

@@ -2,11 +2,11 @@ import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { LugarFavoritoResumen } from '../types';
+import { LugarFavoritoResumen, NegocioFavoritoResumen } from '../types';
 import { COLORES } from '../constants/config';
 
 interface FavoritoCardProps {
-  lugar: LugarFavoritoResumen;
+  lugar: LugarFavoritoResumen | NegocioFavoritoResumen;
   onPress: () => void;
 }
 

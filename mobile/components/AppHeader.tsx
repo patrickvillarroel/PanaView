@@ -6,9 +6,11 @@ import {
   Image,
   StyleSheet,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
+import { BASE_URL } from '../constants/config';
 
 interface AppHeaderProps {
   onMenuPress?: () => void;
@@ -16,6 +18,7 @@ interface AppHeaderProps {
 
 export default function AppHeader({ onMenuPress }: AppHeaderProps) {
   const { usuario } = useAuth();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
 
   const iniciales = usuario?.nombre
@@ -44,15 +47,15 @@ export default function AppHeader({ onMenuPress }: AppHeaderProps) {
       <Text style={styles.titulo}>PanaView</Text>
 
       {/* Avatar */}
-      <View style={styles.avatarContenedor}>
+      <TouchableOpacity style={styles.avatarContenedor} onPress={() => router.push('/(tabs)/perfil')} activeOpacity={0.7}>
         {usuario?.foto_url ? (
-          <Image source={{ uri: usuario.foto_url }} style={styles.avatarImg} />
+          <Image source={{ uri: usuario.foto_url.startsWith('/uploads/') ? `${BASE_URL}${usuario.foto_url}` : usuario.foto_url }} style={styles.avatarImg} />
         ) : (
           <View style={styles.avatarFallback}>
             <Text style={styles.avatarTexto}>{iniciales}</Text>
           </View>
         )}
-      </View>
+      </TouchableOpacity>
     </View>
   );
 }

@@ -1,24 +1,43 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { Usuario, Lugar, CategoriaLugar, ImagenLugar } = require('../models');
+const { Usuario, Lugar, CategoriaLugar, ImagenLugar, Negocio, CategoriaNegocio, ImagenNegocio } = require('../models');
 const { success, error } = require('../utils/responseHelper');
 
 function formatearFavorito(lugar) {
-  const data = lugar.toJSON();
-  const imagenPortada = data.imagenes?.find((imagen) => imagen.es_portada)?.url
-    ?? data.imagenes?.[0]?.url
+  const imagenPortada = lugar.imagenes?.find((imagen) => imagen.es_portada)?.url
+    ?? lugar.imagenes?.[0]?.url
     ?? null;
 
   return {
-    id: data.id,
-    nombre: data.nombre,
-    direccion: data.direccion,
-    provincia: data.provincia,
-    categoria: data.categoria
+    id: lugar.id,
+    nombre: lugar.nombre,
+    direccion: lugar.direccion,
+    provincia: lugar.provincia,
+    categoria: lugar.categoria
       ? {
-          id: data.categoria.id,
-          nombre: data.categoria.nombre,
-          icono: data.categoria.icono,
+          id: lugar.categoria.id,
+          nombre: lugar.categoria.nombre,
+          icono: lugar.categoria.icono,
+        }
+      : null,
+    imagen_portada: imagenPortada,
+  };
+}
+
+function formatearNegocioFavorito(negocio) {
+  const imagenPortada = negocio.imagenes?.find((imagen) => imagen.es_portada)?.url
+    ?? negocio.imagenes?.[0]?.url
+    ?? null;
+
+  return {
+    id: negocio.id,
+    nombre: negocio.nombre,
+    direccion: negocio.direccion,
+    categoria: negocio.categoria
+      ? {
+          id: negocio.categoria.id,
+          nombre: negocio.categoria.nombre,
+          icono: negocio.categoria.icono,
         }
       : null,
     imagen_portada: imagenPortada,
@@ -163,6 +182,24 @@ async function me(req, res, next) {
             },
           ],
         },
+        {
+          model: Negocio,
+          as: 'negociosFavoritos',
+          attributes: ['id', 'nombre', 'direccion'],
+          through: { attributes: [] },
+          include: [
+            {
+              model: CategoriaNegocio,
+              as: 'categoria',
+              attributes: ['id', 'nombre', 'icono'],
+            },
+            {
+              model: ImagenNegocio,
+              as: 'imagenes',
+              attributes: ['url', 'es_portada', 'orden'],
+            },
+          ],
+        },
       ],
     });
 
@@ -177,6 +214,7 @@ async function me(req, res, next) {
       rol: req.user.rol,
       rol_id: usuarioJson.rol_id,
       favoritos: (usuarioJson.favoritos || []).map(formatearFavorito),
+      negociosFavoritos: (usuarioJson.negociosFavoritos || []).map(formatearNegocioFavorito),
     });
   } catch (err) {
     next(err);

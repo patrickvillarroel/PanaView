@@ -100,9 +100,22 @@ export interface LugarFavoritoResumen {
   imagen_portada?: string | null;
 }
 
+export interface NegocioFavoritoResumen {
+  id: string;
+  nombre: string;
+  direccion?: string;
+  categoria: {
+    id?: number;
+    nombre: string;
+    icono?: string;
+  } | null;
+  imagen_portada?: string | null;
+}
+
 export interface UsuarioPerfil extends Usuario {
   creado_en?: string;
   favoritos: LugarFavoritoResumen[];
+  negociosFavoritos: NegocioFavoritoResumen[];
 }
 
 export interface ApiResponse<T> {

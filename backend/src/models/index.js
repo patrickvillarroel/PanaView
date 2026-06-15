@@ -16,6 +16,7 @@ const FavoritoNegocio = require('./FavoritoNegocio');
 const HistorialVisita = require('./HistorialVisita');
 const ResenaNegocio = require('./ResenaNegocio');
 const ImagenPromocion = require('./ImagenPromocion');
+const ImagenUsuario = require('./ImagenUsuario');
 const Promocion = require('./Promocion');
 
 // Inicializar modelos
@@ -33,6 +34,7 @@ const favoritoNegocio = FavoritoNegocio(sequelize, DataTypes);
 const historialVisita = HistorialVisita(sequelize, DataTypes);
 const resenaNegocio = ResenaNegocio(sequelize, DataTypes);
 const imagenPromocion = ImagenPromocion(sequelize, DataTypes);
+const imagenUsuario = ImagenUsuario(sequelize, DataTypes);
 const promocion = Promocion(sequelize, DataTypes);
 
 // Definir asociaciones
@@ -96,6 +98,10 @@ promocion.belongsTo(negocio, { foreignKey: 'negocio_id', as: 'negocio' });
 promocion.hasMany(imagenPromocion, { foreignKey: 'promocion_id', as: 'imagenes' });
 imagenPromocion.belongsTo(promocion, { foreignKey: 'promocion_id' });
 
+// Usuario -> ImagenUsuario
+usuario.hasMany(imagenUsuario, { foreignKey: 'usuario_id', as: 'imagenes' });
+imagenUsuario.belongsTo(usuario, { foreignKey: 'usuario_id' });
+
 module.exports = {
   sequelize,
   Role: role,
@@ -112,5 +118,6 @@ module.exports = {
   FavoritoNegocio: favoritoNegocio,
   HistorialVisita: historialVisita,
   ImagenPromocion: imagenPromocion,
+  ImagenUsuario: imagenUsuario,
   Promocion: promocion,
 };
