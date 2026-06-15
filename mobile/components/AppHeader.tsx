@@ -18,6 +18,7 @@ const IMAGEN_ROL: Record<string, ReturnType<typeof require>> = {
 
 export default function AppHeader() {
   const { usuario } = useAuth();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const router = useRouter();
 

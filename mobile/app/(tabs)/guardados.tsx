@@ -87,7 +87,9 @@ export default function GuardadosScreen() {
     return <LoadingOverlay visible mensaje="Cargando guardados..." />;
   }
 
-  const favoritos = perfil?.favoritos ?? [];
+  const lugares = perfil?.favoritos ?? [];
+  const negocios = perfil?.negociosFavoritos ?? [];
+  const tieneGuardados = lugares.length > 0 || negocios.length > 0;
 
   return (
     <ScrollView
@@ -98,24 +100,50 @@ export default function GuardadosScreen() {
     >
       <View style={styles.header}>
         <Text style={styles.titulo}>Guardados</Text>
-        <Text style={styles.subtitulo}>Tus lugares favoritos sincronizados con tu cuenta.</Text>
+        <Text style={styles.subtitulo}>Tus favoritos sincronizados con tu cuenta.</Text>
       </View>
 
-      {favoritos.length ? (
-        favoritos.map((lugar) => (
-          <FavoritoCard
-            key={lugar.id}
-            lugar={lugar}
-            onPress={() => router.push(`/lugar/${lugar.id}`)}
-          />
-        ))
+      {tieneGuardados ? (
+        <>
+          {lugares.length > 0 && (
+            <View style={styles.seccion}>
+              <View style={styles.seccionHeader}>
+                <Ionicons name="location-outline" size={16} color="#1A1F36" />
+                <Text style={styles.seccionTitulo}>Lugares</Text>
+              </View>
+              {lugares.map((lugar) => (
+                <FavoritoCard
+                  key={`lugar-${lugar.id}`}
+                  lugar={lugar}
+                  onPress={() => router.push(`/lugar/${lugar.id}`)}
+                />
+              ))}
+            </View>
+          )}
+
+          {negocios.length > 0 && (
+            <View style={styles.seccion}>
+              <View style={styles.seccionHeader}>
+                <Ionicons name="business-outline" size={16} color="#1A1F36" />
+                <Text style={styles.seccionTitulo}>Negocios</Text>
+              </View>
+              {negocios.map((negocio) => (
+                <FavoritoCard
+                  key={`negocio-${negocio.id}`}
+                  lugar={negocio}
+                  onPress={() => router.push(`/negocio/detalleNegocio?id=${negocio.id}`)}
+                />
+              ))}
+            </View>
+          )}
+        </>
       ) : (
         <View style={styles.estadoVacioContenedor}>
           <Ionicons name="bookmark-outline" size={70} color={COLORES.acento} />
           <Text style={styles.titulo}>Sin guardados todavía</Text>
-          <Text style={styles.subtitulo}>Explora lugares y usa el corazón para agregarlos aquí.</Text>
+          <Text style={styles.subtitulo}>Explora lugares y negocios, usa el corazón para agregarlos aquí.</Text>
           <TouchableOpacity style={styles.boton} onPress={() => router.push('/(tabs)/explorar')}>
-            <Text style={styles.botonTexto}>Explorar lugares</Text>
+            <Text style={styles.botonTexto}>Explorar</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -131,6 +159,20 @@ const styles = StyleSheet.create({
   contenido: {
     padding: 16,
     paddingBottom: 24,
+  },
+  seccion: {
+    marginBottom: 16,
+  },
+  seccionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 10,
+  },
+  seccionTitulo: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1A1F36',
   },
   header: {
     marginBottom: 12,

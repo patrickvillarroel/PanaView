@@ -52,6 +52,21 @@ INSERT INTO usuarios (id, rol_id, nombre, email, password_hash, activo) VALUES
 ('22222222-3333-4444-5555-666666666666', 1, 'María Turista', 'maria@email.com', '$2b$12$dDskyhRxBiXL8B1295NfGOOkM6EqXe1DCihl4MYk58lrTmqU7dnga', 1);
 
 -- ===================================================================
+-- TABLA: imagenes_usuario
+-- ===================================================================
+
+CREATE TABLE imagenes_usuario (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  usuario_id CHAR(36) NOT NULL,
+  url VARCHAR(500) NOT NULL,
+  es_portada TINYINT(1) DEFAULT 0,
+  orden TINYINT DEFAULT 0,
+  creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+  INDEX idx_usuario (usuario_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ===================================================================
 -- TABLA: categorias_lugar
 -- ===================================================================
 

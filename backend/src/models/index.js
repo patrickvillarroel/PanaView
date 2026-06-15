@@ -16,6 +16,7 @@ const FavoritoNegocio = require('./FavoritoNegocio');
 const HistorialVisita = require('./HistorialVisita');
 const ResenaNegocio = require('./ResenaNegocio');
 const ImagenPromocion = require('./ImagenPromocion');
+const ImagenUsuario = require('./ImagenUsuario');
 const Promocion = require('./Promocion');
 const CompraPromocion = require('./CompraPromocion');
 const CicloFacturacion = require('./CicloFacturacion');
@@ -35,6 +36,7 @@ const favoritoNegocio = FavoritoNegocio(sequelize, DataTypes);
 const historialVisita = HistorialVisita(sequelize, DataTypes);
 const resenaNegocio = ResenaNegocio(sequelize, DataTypes);
 const imagenPromocion = ImagenPromocion(sequelize, DataTypes);
+const imagenUsuario = ImagenUsuario(sequelize, DataTypes);
 const promocion = Promocion(sequelize, DataTypes);
 const compraPromocion = CompraPromocion(sequelize, DataTypes);
 const cicloFacturacion = CicloFacturacion(sequelize, DataTypes);
@@ -132,6 +134,7 @@ module.exports = {
   FavoritoNegocio: favoritoNegocio,
   HistorialVisita: historialVisita,
   ImagenPromocion: imagenPromocion,
+  ImagenUsuario: imagenUsuario,
   Promocion: promocion,
   CompraPromocion: compraPromocion,
   CicloFacturacion: cicloFacturacion,

@@ -6,7 +6,7 @@ import { LugarFavoritoResumen } from '../types';
 import { COLORES, BASE_URL } from '../constants/config';
 
 interface FavoritoCardProps {
-  lugar: LugarFavoritoResumen;
+  lugar: LugarFavoritoResumen | NegocioFavoritoResumen;
   onPress: () => void;
 }
 

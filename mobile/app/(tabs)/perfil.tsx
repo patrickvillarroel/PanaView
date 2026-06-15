@@ -129,7 +129,7 @@ export default function PerfilScreen() {
   });
   const [imagenPromoUri, setImagenPromoUri] = useState<string | null>(null);
 
-  const perfilVisible: UsuarioPerfil | null = perfil ?? (usuario ? { ...usuario, favoritos: [] } : null);
+  const perfilVisible: UsuarioPerfil | null = perfil ?? (usuario ? { ...usuario, favoritos: [], negociosFavoritos: [] } : null);
   const iniciales = perfilVisible?.nombre
     ? perfilVisible.nombre.split(' ').map((parte) => parte[0]).join('').slice(0, 2).toUpperCase()
     : '?';
@@ -558,7 +558,7 @@ export default function PerfilScreen() {
         <View style={styles.hero}>
           <View style={styles.avatarWrap}>
             {perfilVisible?.foto_url ? (
-              <Image source={{ uri: perfilVisible.foto_url }} style={styles.avatarImg} />
+              <Image source={{ uri: perfilVisible.foto_url.startsWith('/uploads/') ? `${BASE_URL}${perfilVisible.foto_url}` : perfilVisible.foto_url }} style={styles.avatarImg} />
             ) : (
               <Image
                 source={IMAGEN_ROL[perfilVisible?.rol ?? 'turista'] ?? IMAGEN_ROL.turista}
@@ -1823,7 +1823,6 @@ const styles = StyleSheet.create({
   },
   negocioCardAcciones: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
   },
   negocioCardBoton: {

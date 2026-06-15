@@ -18,8 +18,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import LoadingOverlay from '../../components/LoadingOverlay';
-import { COLORES } from '../../constants/config';
+import { COLORES, BASE_URL } from '../../constants/config';
 import authService from '../../services/authService';
+import imagenesUsuarioService from '../../services/imagenesUsuarioService';
 
 export default function EditarPerfilScreen() {
   const { usuario, setUsuario, logout } = useAuth();
@@ -28,12 +29,47 @@ export default function EditarPerfilScreen() {
 
   const [nombre, setNombre] = useState('');
   const [fotoUrl, setFotoUrl] = useState('');
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
     setNombre(usuario?.nombre ?? '');
     setFotoUrl(usuario?.foto_url ?? '');
   }, [usuario]);
+
+  const seleccionarFoto = async () => {
+    const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permiso.granted) {
+      Alert.alert('Permiso requerido', 'Necesitamos acceso a tu galería para seleccionar una foto.');
+      return;
+    }
+
+    const resultado = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.8,
+      allowsEditing: true,
+      aspect: [1, 1],
+    });
+
+    if (resultado.canceled) return;
+
+    const uri = resultado.assets[0].uri;
+    if (!usuario?.id) return;
+
+    try {
+      setSubiendoFoto(true);
+      const data = await imagenesUsuarioService.subirImagen(usuario.id, uri);
+      setFotoUrl(data.foto_url);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'No se pudo subir la foto');
+    } finally {
+      setSubiendoFoto(false);
+    }
+  };
+
+  const quitarFoto = () => {
+    setFotoUrl('');
+  };
 
   const handleGuardar = async () => {
     const nombreLimpio = nombre.trim();
@@ -47,7 +83,7 @@ export default function EditarPerfilScreen() {
       setGuardando(true);
       const perfilActualizado = await authService.updateMe({
         nombre: nombreLimpio,
-        foto_url: fotoUrl.trim() || null,
+        foto_url: fotoUrl || null,
       });
 
       const usuarioBase = {
@@ -99,15 +135,18 @@ export default function EditarPerfilScreen() {
         </TouchableOpacity>
 
         <View style={styles.hero}>
-          <View style={styles.avatarWrap}>
-            {fotoUrl.trim() ? (
-              <Image source={{ uri: fotoUrl.trim() }} style={styles.avatar} />
+          <TouchableOpacity style={styles.avatarWrap} onPress={seleccionarFoto} disabled={subiendoFoto}>
+            {fotoUrl ? (
+              <Image source={{ uri: fotoUrl.startsWith('/uploads/') ? `${BASE_URL}${fotoUrl}` : fotoUrl }} style={styles.avatar} />
             ) : (
               <LinearGradient colors={[COLORES.secundario, COLORES.primario]} style={styles.avatar}>
                 <Text style={styles.avatarTexto}>{iniciales || '?'}</Text>
               </LinearGradient>
             )}
-          </View>
+            <View style={styles.camaraBadge}>
+              <Ionicons name="camera" size={16} color="#fff" />
+            </View>
+          </TouchableOpacity>
           <Text style={styles.titulo}>Editar perfil</Text>
           <Text style={styles.subtitulo}>Actualiza tu nombre y foto para mantener sincronizada tu cuenta.</Text>
         </View>
@@ -124,20 +163,20 @@ export default function EditarPerfilScreen() {
           />
 
           <Text style={styles.label}>Foto de perfil</Text>
-          <TextInput
-            value={fotoUrl}
-            onChangeText={setFotoUrl}
-            style={styles.input}
-            placeholder="https://..."
-            placeholderTextColor={COLORES.textoBorrado}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="url"
-          />
 
-          <TouchableOpacity style={styles.botonSecundario} onPress={() => setFotoUrl('')}>
-            <Text style={styles.botonSecundarioTexto}>Quitar foto</Text>
+          <TouchableOpacity style={styles.botonGaleria} onPress={seleccionarFoto} disabled={subiendoFoto}>
+            <Ionicons name="images-outline" size={18} color={COLORES.primario} />
+            <Text style={styles.botonGaleriaTexto}>
+              {subiendoFoto ? 'Subiendo foto...' : fotoUrl ? 'Cambiar foto' : 'Seleccionar foto'}
+            </Text>
           </TouchableOpacity>
+
+          {fotoUrl ? (
+            <TouchableOpacity style={styles.botonQuitar} onPress={quitarFoto}>
+              <Ionicons name="trash-outline" size={16} color="#E53935" />
+              <Text style={styles.botonQuitarTexto}>Quitar foto</Text>
+            </TouchableOpacity>
+          ) : null}
 
           <TouchableOpacity style={styles.botonPrimario} onPress={handleGuardar}>
             <Text style={styles.botonPrimarioTexto}>Guardar cambios</Text>
@@ -145,7 +184,7 @@ export default function EditarPerfilScreen() {
         </View>
       </ScrollView>
 
-      <LoadingOverlay visible={guardando} mensaje="Guardando cambios..." />
+      <LoadingOverlay visible={guardando || subiendoFoto} mensaje="Guardando cambios..." />
     </KeyboardAvoidingView>
   );
 }
@@ -181,6 +220,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 12,
     elevation: 6,
+    position: 'relative',
   },
   avatar: {
     width: 104,
@@ -195,6 +235,19 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 34,
     fontWeight: '800',
+  },
+  camaraBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: -2,
+    backgroundColor: COLORES.primario,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   titulo: {
     fontSize: 24,
@@ -234,6 +287,38 @@ const styles = StyleSheet.create({
     color: COLORES.texto,
     backgroundColor: '#F9FBFD',
   },
+  botonGaleria: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 13,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORES.primario,
+    borderStyle: 'dashed',
+  },
+  botonGaleriaTexto: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORES.primario,
+  },
+  botonQuitar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FFCDD2',
+    backgroundColor: '#FFEBEE',
+  },
+  botonQuitarTexto: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#E53935',
+  },
   botonPrimario: {
     backgroundColor: COLORES.primario,
     paddingVertical: 13,
@@ -244,18 +329,6 @@ const styles = StyleSheet.create({
   botonPrimarioTexto: {
     color: '#fff',
     fontSize: 15,
-    fontWeight: '700',
-  },
-  botonSecundario: {
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#D9E2EC',
-  },
-  botonSecundarioTexto: {
-    color: '#1A1F36',
-    fontSize: 14,
     fontWeight: '700',
   },
 });
