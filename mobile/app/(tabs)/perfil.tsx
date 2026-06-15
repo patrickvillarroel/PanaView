@@ -75,6 +75,9 @@ export default function PerfilScreen() {
 
   // Estado para formulario de negocio
   const [modalNegocioVisible, setModalNegocioVisible] = useState(false);
+  const [editandoNegocioId, setEditandoNegocioId] = useState<string | null>(null);
+  const [negocioExpandido, setNegocioExpandido] = useState<string | null>(null);
+  const [imagenesExistentes, setImagenesExistentes] = useState<{id: number; url: string; es_portada: boolean; orden: number}[]>([]);
   const [categorias, setCategorias] = useState<CategoriaNegocio[]>([]);
   const [enviandoNegocio, setEnviandoNegocio] = useState(false);
   const [formNegocio, setFormNegocio] = useState({
@@ -267,6 +270,7 @@ export default function PerfilScreen() {
   }
 
   function abrirFormularioNegocio() {
+    setEditandoNegocioId(null);
     setFormNegocio({
       nombre: '',
       descripcion: '',
@@ -278,6 +282,34 @@ export default function PerfilScreen() {
       sitio_web: '',
     });
     setImagenesSeleccionadas([]);
+    setImagenesExistentes([]);
+    setModalNegocioVisible(true);
+  }
+
+  function abrirEdicionNegocio(negocio: Negocio) {
+    console.log('[edicion] abrirEdicionNegocio negocio.id:', negocio.id, 'tipo:', typeof negocio.id);
+    setEditandoNegocioId(negocio.id);
+    setFormNegocio({
+      nombre: negocio.nombre || '',
+      descripcion: negocio.descripcion || '',
+      categoria_id: String(negocio.categoria?.id || ''),
+      direccion: negocio.direccion || '',
+      telefono: negocio.telefono || '',
+      whatsapp: negocio.whatsapp || '',
+      horario: negocio.horario || '',
+      sitio_web: negocio.sitio_web || '',
+    });
+    setImagenesSeleccionadas([]);
+    setImagenesExistentes(
+      (negocio.imagenes || [])
+        .filter((img: any) => img.id != null)
+        .map((img: any) => ({
+          id: img.id,
+          url: img.url,
+          es_portada: img.es_portada,
+          orden: img.orden ?? 0,
+        }))
+    );
     setModalNegocioVisible(true);
   }
 
@@ -303,6 +335,16 @@ export default function PerfilScreen() {
 
   function eliminarImagen(uri: string) {
     setImagenesSeleccionadas((prev) => prev.filter((u) => u !== uri));
+  }
+
+  async function eliminarImagenExistente(imagenId: number) {
+    if (!editandoNegocioId) return;
+    try {
+      await negociosService.eliminarImagenNegocio(editandoNegocioId, imagenId);
+      setImagenesExistentes((prev) => prev.filter((img) => img.id !== imagenId));
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'No se pudo eliminar la imagen');
+    }
   }
 
   async function handleRegistrarNegocio() {
@@ -331,7 +373,7 @@ export default function PerfilScreen() {
         // Usar coordenadas por defecto
       }
 
-      const nuevoNegocio = await negociosService.crearNegocio({
+      const payload: any = {
         nombre: formNegocio.nombre.trim(),
         descripcion: formNegocio.descripcion.trim() || undefined,
         categoria: { id: Number(formNegocio.categoria_id), nombre: '', icono: '' },
@@ -343,24 +385,38 @@ export default function PerfilScreen() {
         horario: formNegocio.horario.trim() || undefined,
         sitio_web: formNegocio.sitio_web.trim() || undefined,
         imagenes: [],
-      });
+      };
 
-      console.log('[handleRegistrarNegocio] nuevoNegocio:', nuevoNegocio?.id, 'imagenes:', imagenesSeleccionadas.length);
+      let negocioId: string;
 
-      if (nuevoNegocio?.id && imagenesSeleccionadas.length > 0) {
+      if (editandoNegocioId) {
+        const actualizado = await negociosService.actualizarNegocio(editandoNegocioId, payload);
+        negocioId = actualizado.id;
+      } else {
+        const nuevoNegocio = await negociosService.crearNegocio(payload);
+        negocioId = nuevoNegocio.id;
+      }
+
+      if (negocioId && imagenesSeleccionadas.length > 0) {
+        const maxOrden = imagenesExistentes.reduce((max, img) => Math.max(max, img.orden ?? 0), 0);
+        const esEdicion = Boolean(editandoNegocioId);
         for (let i = 0; i < imagenesSeleccionadas.length; i++) {
+          const esPortadaNueva = !esEdicion && i === 0;
           await negociosService.subirImagenNegocio(
-            nuevoNegocio.id,
+            negocioId,
             imagenesSeleccionadas[i],
-            i === 0
+            esPortadaNueva,
+            esPortadaNueva ? 0 : maxOrden + i + 1
           );
         }
       }
 
       setModalNegocioVisible(false);
       Alert.alert(
-        'Solicitud enviada',
-        'Tu negocio ha sido registrado y está pendiente de verificación. Te notificaremos cuando sea aprobado.'
+        'Éxito',
+        editandoNegocioId
+          ? 'Negocio actualizado correctamente'
+          : 'Tu negocio ha sido registrado y está pendiente de verificación.'
       );
       void cargarMisNegocios();
     } catch (err: any) {
@@ -551,12 +607,18 @@ export default function PerfilScreen() {
               </View>
             ) : (
               misNegocios.map((negocio) => {
-                const imagenPortada = negocio.imagenes?.find((img) => img.es_portada);
+                const imagenPortada = negocio.imagenes?.find((img) => img.es_portada) || negocio.imagenes?.find((img) => img.url);
                 const uriImagen = imagenPortada?.url ? `${BASE_URL}${imagenPortada.url}` : null;
+
+                const expandido = negocioExpandido === negocio.id;
 
                 return (
                   <View key={negocio.id} style={styles.negocioCard}>
-                    <View style={styles.negocioCardHeader}>
+                    <TouchableOpacity
+                      style={styles.negocioCardHeader}
+                      onPress={() => setNegocioExpandido(expandido ? null : negocio.id)}
+                      activeOpacity={0.7}
+                    >
                       {uriImagen ? (
                         <Image source={{ uri: uriImagen }} style={styles.negocioCardImagen} />
                       ) : (
@@ -581,7 +643,48 @@ export default function PerfilScreen() {
                           </Text>
                         </View>
                       </View>
-                    </View>
+                      <Ionicons
+                        name={expandido ? 'chevron-up' : 'chevron-down'}
+                        size={18}
+                        color={COLORES.textoBorrado}
+                      />
+                    </TouchableOpacity>
+
+                    {expandido && (
+                      <View style={styles.negocioCardExpandido}>
+                        {negocio.descripcion && (
+                          <Text style={styles.negocioCardDesc}>{negocio.descripcion}</Text>
+                        )}
+                        <View style={styles.negocioCardDetalles}>
+                          {negocio.direccion && (
+                            <View style={styles.negocioCardDetalle}>
+                              <Ionicons name="location-outline" size={13} color={COLORES.textoBorrado} />
+                              <Text style={styles.negocioCardDetalleTexto}>{negocio.direccion}</Text>
+                            </View>
+                          )}
+                          {negocio.telefono && (
+                            <View style={styles.negocioCardDetalle}>
+                              <Ionicons name="call-outline" size={13} color={COLORES.textoBorrado} />
+                              <Text style={styles.negocioCardDetalleTexto}>{negocio.telefono}</Text>
+                            </View>
+                          )}
+                          {negocio.horario && (
+                            <View style={styles.negocioCardDetalle}>
+                              <Ionicons name="time-outline" size={13} color={COLORES.textoBorrado} />
+                              <Text style={styles.negocioCardDetalleTexto}>{negocio.horario}</Text>
+                            </View>
+                          )}
+                        </View>
+                        <TouchableOpacity
+                          style={styles.negocioCardEditar}
+                          onPress={() => abrirEdicionNegocio(negocio)}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="create-outline" size={15} color="#fff" />
+                          <Text style={styles.negocioCardEditarTexto}>Editar negocio</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
 
                     <View style={styles.negocioCardAcciones}>
                       <TouchableOpacity
@@ -690,7 +793,9 @@ export default function PerfilScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalNegocioCard}>
             <View style={styles.modalNegocioHeader}>
-              <Text style={styles.modalNegocioTitulo}>Registrar negocio</Text>
+              <Text style={styles.modalNegocioTitulo}>
+                {editandoNegocioId ? 'Editar negocio' : 'Registrar negocio'}
+              </Text>
               <TouchableOpacity onPress={() => setModalNegocioVisible(false)}>
                 <Ionicons name="close" size={22} color={COLORES.textoBorrado} />
               </TouchableOpacity>
@@ -798,6 +903,22 @@ export default function PerfilScreen() {
 
               <Text style={styles.modalNegocioLabel}>Imágenes del negocio (máx. 5)</Text>
               <View style={styles.imagenesGrid}>
+                {imagenesExistentes.map((img) => (
+                  <View key={`exist-${img.id ?? img.url}`} style={styles.imagenPreviewWrap}>
+                    <Image source={{ uri: `${BASE_URL}${img.url}` }} style={styles.imagenPreview} />
+                    <TouchableOpacity
+                      style={styles.imagenEliminar}
+                      onPress={() => eliminarImagenExistente(img.id)}
+                    >
+                      <Ionicons name="close-circle" size={20} color="#E53935" />
+                    </TouchableOpacity>
+                    {img.es_portada && (
+                      <View style={styles.imagenPortadaBadge}>
+                        <Text style={styles.imagenPortadaBadgeTexto}>Portada</Text>
+                      </View>
+                    )}
+                  </View>
+                ))}
                 {imagenesSeleccionadas.map((uri, index) => (
                   <View key={uri} style={styles.imagenPreviewWrap}>
                     <Image source={{ uri }} style={styles.imagenPreview} />
@@ -807,14 +928,14 @@ export default function PerfilScreen() {
                     >
                       <Ionicons name="close-circle" size={20} color="#E53935" />
                     </TouchableOpacity>
-                    {index === 0 && (
+                    {imagenesExistentes.length === 0 && index === 0 && (
                       <View style={styles.imagenPortadaBadge}>
                         <Text style={styles.imagenPortadaBadgeTexto}>Portada</Text>
                       </View>
                     )}
                   </View>
                 ))}
-                {imagenesSeleccionadas.length < 5 && (
+                {(imagenesExistentes.length + imagenesSeleccionadas.length) < 5 && (
                   <TouchableOpacity style={styles.imagenAgregar} onPress={seleccionarImagen}>
                     <Ionicons name="camera-outline" size={28} color={COLORES.textoBorrado} />
                     <Text style={styles.imagenAgregarTexto}>Agregar</Text>
@@ -839,7 +960,9 @@ export default function PerfilScreen() {
               {enviandoNegocio ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Text style={styles.modalNegocioBotonTexto}>Solicitar registro</Text>
+                <Text style={styles.modalNegocioBotonTexto}>
+                  {editandoNegocioId ? 'Guardar cambios' : 'Solicitar registro'}
+                </Text>
               )}
             </TouchableOpacity>
           </View>
@@ -1472,16 +1595,57 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
+  negocioCardExpandido: {
+    paddingHorizontal: 12,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8ECF0',
+    marginBottom: 10,
+  },
+  negocioCardDesc: {
+    fontSize: 12,
+    color: COLORES.texto,
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  negocioCardDetalles: {
+    gap: 4,
+    marginBottom: 10,
+  },
+  negocioCardDetalle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  negocioCardDetalleTexto: {
+    fontSize: 11,
+    color: COLORES.textoBorrado,
+  },
+  negocioCardEditar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: COLORES.primario,
+    borderRadius: 10,
+    paddingVertical: 10,
+  },
+  negocioCardEditarTexto: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#fff',
+  },
   negocioCardAcciones: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
   negocioCardBoton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: 10,
     backgroundColor: '#EEF2F7',
   },
@@ -1489,7 +1653,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORES.primario,
   },
   negocioCardBotonTexto: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     color: COLORES.primario,
   },

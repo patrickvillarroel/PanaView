@@ -12,7 +12,7 @@ exports.listarPromociones = async (req, res, next) => {
         {
           model: ImagenPromocion,
           as: 'imagenes',
-          attributes: ['url', 'es_portada', 'orden'],
+          attributes: ['id', 'url', 'es_portada', 'orden'],
         },
       ],
     });
@@ -51,12 +51,44 @@ exports.obtenerPromocion = async (req, res, next) => {
         {
           model: ImagenPromocion,
           as: 'imagenes',
-          attributes: ['url', 'es_portada', 'orden'],
+          attributes: ['id', 'url', 'es_portada', 'orden'],
         },
       ],
     });
     if (!promocion) return error(res, 'Promoción no encontrada', 404);
     return success(res, promocion);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Actualizar promocion
+exports.actualizarPromocion = async (req, res, next) => {
+  try {
+    const { promoId } = req.params;
+    const { nombre, descripcion, precio, fecha_validez } = req.body;
+    const promocion = await Promocion.findByPk(promoId);
+    if (!promocion) return error(res, 'Promoción no encontrada', 404);
+    await promocion.update({
+      nombre: nombre ?? promocion.nombre,
+      descripcion: descripcion ?? promocion.descripcion,
+      precio: precio ?? promocion.precio,
+      fecha_validez: fecha_validez !== undefined ? (fecha_validez || null) : promocion.fecha_validez,
+    });
+    return success(res, promocion);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Eliminar promocion (soft delete - desactivar)
+exports.eliminarPromocion = async (req, res, next) => {
+  try {
+    const { promoId } = req.params;
+    const promocion = await Promocion.findByPk(promoId);
+    if (!promocion) return error(res, 'Promoción no encontrada', 404);
+    await promocion.update({ activo: false });
+    return success(res, { mensaje: 'Promoción eliminada' });
   } catch (err) {
     next(err);
   }

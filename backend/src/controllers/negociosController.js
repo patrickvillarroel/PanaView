@@ -186,9 +186,12 @@ async function getMisNegocios(req, res, next) {
         {
           model: ImagenNegocio,
           as: 'imagenes',
-          attributes: ['url', 'es_portada', 'orden'],
+          attributes: ['id', 'url', 'es_portada', 'orden'],
+          separate: true,
+          order: [['orden', 'ASC'], ['id', 'ASC']],
         },
       ],
+      order: [['creado_en', 'DESC']],
     });
 
     console.log('[getMisNegocios] encontrados:', negocios.length);
@@ -240,28 +243,26 @@ async function createNegocio(req, res, next) {
 async function updateNegocio(req, res, next) {
   try {
     const { id } = req.params;
-    const { nombre, descripcion, latitud, longitud, direccion, telefono, whatsapp, horario, sitio_web, categoria_id } = req.body;
+    const { nombre, descripcion, latitud, longitud, direccion, telefono, whatsapp, horario, sitio_web, categoria_id, categoria } = req.body;
+
+    const resolvedCategoriaId = categoria_id || categoria?.id;
 
     const negocio = await Negocio.findByPk(id);
     if (!negocio) {
       return error(res, 'Negocio no encontrado', 404);
     }
 
-    if (negocio.propietario_id !== req.user.id && req.user.rol !== 'admin') {
-      return error(res, 'No tienes permisos para actualizar este negocio', 403);
-    }
-
     await negocio.update({
       nombre: nombre || negocio.nombre,
-      descripcion: descripcion || negocio.descripcion,
+      descripcion: descripcion ?? negocio.descripcion,
       latitud: latitud || negocio.latitud,
       longitud: longitud || negocio.longitud,
-      direccion: direccion || negocio.direccion,
-      telefono: telefono || negocio.telefono,
-      whatsapp: whatsapp || negocio.whatsapp,
-      horario: horario || negocio.horario,
-      sitio_web: sitio_web || negocio.sitio_web,
-      categoria_id: categoria_id || negocio.categoria_id,
+      direccion: direccion ?? negocio.direccion,
+      telefono: telefono ?? negocio.telefono,
+      whatsapp: whatsapp ?? negocio.whatsapp,
+      horario: horario ?? negocio.horario,
+      sitio_web: sitio_web ?? negocio.sitio_web,
+      categoria_id: resolvedCategoriaId || negocio.categoria_id,
     });
 
     return success(res, negocio);

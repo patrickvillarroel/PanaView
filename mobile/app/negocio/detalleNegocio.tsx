@@ -21,6 +21,8 @@ import negociosService from '../../services/negociosService';
 import favoritosNegociosService from '../../services/favoritosNegociosService';
 import resenasNegociosService from '../../services/resenasNegociosService';
 import LoadingOverlay from '../../components/LoadingOverlay';
+import AppHeader from '../../components/AppHeader';
+import SimpleBottomNav from '../../components/SimpleBottomNav';
 import { COLORES, ESPACIADO, TAMAÑOS, BORDES, BASE_URL } from '../../constants/config';
 
 const { width: ANCHO } = Dimensions.get('window');
@@ -138,11 +140,15 @@ export default function NegocioDetailScreen() {
 
   if (error || !negocio) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorTexto}>{error ?? 'Negocio no encontrado'}</Text>
-        <TouchableOpacity style={styles.botonVolver} onPress={() => router.back()}>
-          <Text style={styles.botonVolverTexto}>Volver</Text>
-        </TouchableOpacity>
+      <View style={{ flex: 1 }}>
+        <AppHeader />
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorTexto}>{error ?? 'Negocio no encontrado'}</Text>
+          <TouchableOpacity style={styles.botonVolver} onPress={() => router.back()}>
+            <Text style={styles.botonVolverTexto}>Volver</Text>
+          </TouchableOpacity>
+        </View>
+        <SimpleBottomNav activeTab="explorar" />
       </View>
     );
   }
@@ -166,7 +172,9 @@ export default function NegocioDetailScreen() {
   const totalResenas = negocio.total_resenas ?? 0;
 
   return (
-    <ScrollView style={styles.contenedor} showsVerticalScrollIndicator={false}>
+    <View style={{ flex: 1 }}>
+      <AppHeader />
+      <ScrollView style={styles.contenedor} showsVerticalScrollIndicator={false}>
       <View style={styles.hero}>
         {uriImagen ? (
           <Image source={{ uri: uriImagen }} style={styles.heroImagen} resizeMode="cover" />
@@ -431,6 +439,8 @@ export default function NegocioDetailScreen() {
 
       <View style={{ height: 100 }} />
     </ScrollView>
+    <SimpleBottomNav activeTab="explorar" />
+    </View>
   );
 }
 
@@ -469,7 +479,7 @@ const styles = StyleSheet.create({
   },
   botonAtras: {
     position: 'absolute',
-    top: 44,
+    top: 12,
     left: 16,
     width: 38,
     height: 38,
@@ -486,7 +496,7 @@ const styles = StyleSheet.create({
   },
   botonFavorito: {
     position: 'absolute',
-    top: 44,
+    top: 12,
     right: 16,
     width: 38,
     height: 38,

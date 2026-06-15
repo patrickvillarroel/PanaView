@@ -80,7 +80,8 @@ class NegociosService {
   async subirImagenNegocio(
     negocioId: string,
     uri: string,
-    esPortada: boolean = false
+    esPortada: boolean = false,
+    orden: number = 0
   ): Promise<any> {
     try {
       const formData = new FormData();
@@ -88,9 +89,10 @@ class NegociosService {
       const match = /\.(\w+)$/.exec(filename);
       const type = match ? `image/${match[1]}` : 'image/jpeg';
       formData.append('imagen', { uri, name: filename, type } as any);
-      formData.append('es_portada', String(esPortada));
+      formData.append('es_portada', esPortada ? 'true' : 'false');
+      formData.append('orden', String(orden));
 
-      console.log('[subirImagen] negocioId:', negocioId, 'uri:', uri, 'esPortada:', esPortada);
+      console.log('[subirImagen] negocioId:', negocioId, 'esPortada:', esPortada, 'orden:', orden);
 
       const response = await api.post(
         `/imagenes-negocio/${negocioId}`,
@@ -103,6 +105,16 @@ class NegociosService {
       console.error('[subirImagen] error:', error.response?.status, error.response?.data);
       throw new Error(
         error.response?.data?.message || 'Error al subir imagen'
+      );
+    }
+  }
+
+  async eliminarImagenNegocio(negocioId: string, imagenId: number): Promise<void> {
+    try {
+      await api.delete(`/imagenes-negocio/${negocioId}/${imagenId}`);
+    } catch (error: any) {
+      throw new Error(
+        error.response?.data?.message || 'Error al eliminar imagen'
       );
     }
   }

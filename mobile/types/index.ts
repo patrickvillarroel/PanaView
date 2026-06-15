@@ -134,6 +134,7 @@ export interface Promocion {
   activo?: boolean;
   creado_en?: string;
   imagenes: {
+    id?: number;
     url: string;
     es_portada: boolean;
     orden?: number;
