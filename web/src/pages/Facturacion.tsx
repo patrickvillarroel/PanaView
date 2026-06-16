@@ -1,14 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Receipt,
   AlertTriangle,
   CheckCircle2,
   RefreshCw,
   TrendingUp,
   Clock,
   BadgeDollarSign,
-  ChevronRight,
 } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
 import { useToast } from '../components/ToastContext';

@@ -18,6 +18,8 @@ import { Promocion } from '../../types';
 import LoadingOverlay from '../../components/LoadingOverlay';
 import { useAuth } from '../../context/AuthContext';
 import { COLORES, ESPACIADO, TAMAÑOS, BORDES, BASE_URL } from '../../constants/config';
+import AppHeader from '../../components/AppHeader';
+import SimpleBottomNav from '../../components/SimpleBottomNav';
 
 const { width: ANCHO } = Dimensions.get('window');
 

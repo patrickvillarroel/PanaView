@@ -75,6 +75,12 @@ exports.listarPromociones = async (req, res, next) => {
 exports.crearPromocion = async (req, res, next) => {
   try {
     const { negocioId } = req.params;
+    const negocio = await Negocio.findByPk(negocioId);
+    if (!negocio) return error(res, 'Negocio no encontrado', 404);
+    if (req.user.rol !== 'admin' && negocio.propietario_id !== req.user.id) {
+      return error(res, 'No tienes permisos para crear promociones en este negocio', 403);
+    }
+
     const { nombre, descripcion, precio, fecha_validez } = req.body;
     const nueva = await Promocion.create({
       negocio_id: negocioId,
@@ -115,9 +121,15 @@ exports.obtenerPromocion = async (req, res, next) => {
 exports.actualizarPromocion = async (req, res, next) => {
   try {
     const { promoId } = req.params;
-    const { nombre, descripcion, precio, fecha_validez } = req.body;
-    const promocion = await Promocion.findByPk(promoId);
+    const promocion = await Promocion.findByPk(promoId, {
+      include: [{ model: Negocio, as: 'negocio', attributes: ['id', 'propietario_id'] }],
+    });
     if (!promocion) return error(res, 'Promoción no encontrada', 404);
+    if (req.user.rol !== 'admin' && promocion.negocio?.propietario_id !== req.user.id) {
+      return error(res, 'No tienes permisos para modificar esta promoción', 403);
+    }
+
+    const { nombre, descripcion, precio, fecha_validez } = req.body;
     await promocion.update({
       nombre: nombre ?? promocion.nombre,
       descripcion: descripcion ?? promocion.descripcion,
@@ -134,8 +146,13 @@ exports.actualizarPromocion = async (req, res, next) => {
 exports.eliminarPromocion = async (req, res, next) => {
   try {
     const { promoId } = req.params;
-    const promocion = await Promocion.findByPk(promoId);
+    const promocion = await Promocion.findByPk(promoId, {
+      include: [{ model: Negocio, as: 'negocio', attributes: ['id', 'propietario_id'] }],
+    });
     if (!promocion) return error(res, 'Promoción no encontrada', 404);
+    if (req.user.rol !== 'admin' && promocion.negocio?.propietario_id !== req.user.id) {
+      return error(res, 'No tienes permisos para eliminar esta promoción', 403);
+    }
     await promocion.update({ activo: false });
     return success(res, { mensaje: 'Promoción eliminada' });
   } catch (err) {

@@ -37,7 +37,8 @@
           "locationAlwaysAndWhenInUsePermission": "Permitir que PanaRoute acceda a tu ubicación para descubrir sitios cercanos"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-audio"
     ],
     "extra": {
       "router": {

@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
+  Linking,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -47,7 +49,19 @@ function ChipEstado({ estado }: { estado: keyof typeof ESTADO_CONFIG }) {
 
 // ─── Tarjeta ciclo ────────────────────────────────────────────────────────────
 
-function TarjetaCiclo({ ciclo, destacada = false }: { ciclo: CicloFacturacion; destacada?: boolean }) {
+function TarjetaCiclo({
+  ciclo,
+  destacada = false,
+  onPagar,
+  pagando = false,
+}: {
+  ciclo: CicloFacturacion;
+  destacada?: boolean;
+  onPagar?: (cicloId: string) => void;
+  pagando?: boolean;
+}) {
+  const puedePagar = ciclo.estado === 'pendiente_pago' || ciclo.estado === 'vencido';
+
   return (
     <View style={[styles.tarjetaCiclo, destacada && styles.tarjetaCicloDestacada]}>
       <View style={styles.tarjetaCicloHeader}>
@@ -94,6 +108,24 @@ function TarjetaCiclo({ ciclo, destacada = false }: { ciclo: CicloFacturacion; d
           </Text>
         </View>
       )}
+
+      {puedePagar && onPagar && (
+        <TouchableOpacity
+          style={[styles.botonPagar, pagando && { opacity: 0.7 }]}
+          onPress={() => onPagar(ciclo.id)}
+          disabled={pagando}
+          activeOpacity={0.85}
+        >
+          {pagando ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <>
+              <Ionicons name="card-outline" size={16} color="#fff" />
+              <Text style={styles.botonPagarTexto}>Pagar ahora</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -129,6 +161,7 @@ export default function FacturacionScreen() {
   const [cargando, setCargando] = useState(true);
   const [refrescando, setRefrescando] = useState(false);
   const [tabActiva, setTabActiva] = useState<'ciclos' | 'canjeos'>('ciclos');
+  const [pagandoId, setPagandoId] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     if (!negocioId) return;
@@ -152,6 +185,18 @@ export default function FacturacionScreen() {
     setRefrescando(true);
     await cargar();
     setRefrescando(false);
+  };
+
+  const iniciarPago = async (cicloId: string) => {
+    setPagandoId(cicloId);
+    try {
+      const { url } = await facturacionService.crearPago(cicloId);
+      await Linking.openURL(url);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'No se pudo iniciar el pago');
+    } finally {
+      setPagandoId(null);
+    }
   };
 
   if (cargando) {
@@ -211,7 +256,12 @@ export default function FacturacionScreen() {
         {resumen?.cicloActual && (
           <View style={styles.seccion}>
             <Text style={styles.seccionTitulo}>Ciclo actual</Text>
-            <TarjetaCiclo ciclo={resumen.cicloActual} destacada />
+            <TarjetaCiclo
+              ciclo={resumen.cicloActual}
+              destacada
+              onPagar={iniciarPago}
+              pagando={pagandoId === resumen.cicloActual.id}
+            />
           </View>
         )}
 
@@ -238,7 +288,14 @@ export default function FacturacionScreen() {
             ) : (
               (resumen?.historial ?? [])
                 .filter((c) => c.estado !== 'activo')
-                .map((c) => <TarjetaCiclo key={c.id} ciclo={c} />)
+                .map((c) => (
+                  <TarjetaCiclo
+                    key={c.id}
+                    ciclo={c}
+                    onPagar={iniciarPago}
+                    pagando={pagandoId === c.id}
+                  />
+                ))
             )}
           </View>
         ) : (
@@ -394,6 +451,22 @@ const styles = StyleSheet.create({
     fontSize: TAMAÑOS.fontoPequeno,
     color: '#D97706',
     lineHeight: 18,
+  },
+
+  botonPagar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: COLORES.primario,
+    borderRadius: BORDES.redondeado,
+    paddingVertical: 12,
+    marginTop: ESPACIADO.md,
+  },
+  botonPagarTexto: {
+    color: '#fff',
+    fontSize: TAMAÑOS.fontoNormal,
+    fontWeight: '700',
   },
 
   chip: {

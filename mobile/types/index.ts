@@ -17,6 +17,7 @@ export interface Lugar {
   direccion?: string;
   provincia?: string;
   audio_url?: string;
+  historia_en?: string;
   activo?: boolean;
   categoria: {
     id: number;
@@ -48,6 +49,8 @@ export interface Negocio {
   sitio_web?: string;
   verificado?: boolean;
   activo?: boolean;
+  comision_porcentaje?: number;
+  tipo_ciclo?: 'quincenal' | 'mensual';
   categoria: {
     id: number;
     nombre: string;

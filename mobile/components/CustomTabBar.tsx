@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -11,7 +11,7 @@ type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 type TabRoute = { key: string; name: string };
 type TabBarState = { index: number; routes: TabRoute[] };
 type TabBarNavigation = {
-  emit: (e: { type: 'tabPress'; target: string; canPreventDefault: boolean }) => { defaultPrevented: boolean };
+  emit: (e: any) => any;
   navigate: (name: string) => void;
 };
 type CustomTabBarProps = { state: TabBarState; navigation: TabBarNavigation };
@@ -122,7 +122,7 @@ export default function CustomTabBar({ state, navigation }: CustomTabBarProps) {
       })}
 
       {mostrarEscaner && (
-        <TouchableOpacity
+        <Pressable
           style={styles.tab}
           onPress={() => router.push('/negocio/escanerQR')}
           android_ripple={null}
@@ -131,7 +131,7 @@ export default function CustomTabBar({ state, navigation }: CustomTabBarProps) {
             <Ionicons name="qr-code-outline" size={22} color="#9AA0A6" />
           </View>
           <Text style={styles.etiqueta}>Escanear</Text>
-        </TouchableOpacity>
+        </Pressable>
       )}
     </View>
   );

@@ -41,6 +41,8 @@ const EMPTY: FormState = {
 
 const NOMINATIM = 'https://nominatim.openstreetmap.org/reverse';
 const URL_RE = /^https?:\/\/.+\..+/;
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
 export default function LugarFormModal({ open, lugar, onClose, onSaved }: Props) {
   const toast = useToast();
@@ -94,6 +96,16 @@ export default function LugarFormModal({ open, lugar, onClose, onSaved }: Props)
     const file = e.target.files?.[0] ?? null;
     e.target.value = '';
     if (!file) return;
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      toast.error('Formato no válido. Usa JPEG, PNG o WebP');
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      toast.error('La imagen no puede superar 5 MB');
+      return;
+    }
+
     if (blobUrl.current) URL.revokeObjectURL(blobUrl.current);
     const url = URL.createObjectURL(file);
     blobUrl.current = url;
@@ -154,6 +166,9 @@ export default function LugarFormModal({ open, lugar, onClose, onSaved }: Props)
 
     if (form.historia.trim().length > 2000)
       e.historia = 'La historia no puede superar los 2000 caracteres';
+
+    if (!form.provincia.trim()) e.provincia = 'La provincia es obligatoria';
+    if (!form.direccion.trim()) e.direccion = 'La dirección es obligatoria';
 
     const lat = parseFloat(form.latitud);
     const lng = parseFloat(form.longitud);
@@ -409,22 +424,24 @@ export default function LugarFormModal({ open, lugar, onClose, onSaved }: Props)
         {/* Provincia + Dirección */}
         <div className="grid-2">
           <div>
-            <label className="label">Provincia</label>
+            <label className="label">Provincia *</label>
             <input
-              className="input"
+              className={`input ${errors.provincia ? 'invalid' : ''}`}
               value={form.provincia}
               onChange={(e) => set('provincia', e.target.value)}
               placeholder="Auto-detectada del mapa"
             />
+            {errors.provincia && <div className="field-error">{errors.provincia}</div>}
           </div>
           <div>
-            <label className="label">Dirección</label>
+            <label className="label">Dirección *</label>
             <input
-              className="input"
+              className={`input ${errors.direccion ? 'invalid' : ''}`}
               value={form.direccion}
               onChange={(e) => set('direccion', e.target.value)}
               placeholder="Auto-detectada del mapa"
             />
+            {errors.direccion && <div className="field-error">{errors.direccion}</div>}
           </div>
         </div>
 

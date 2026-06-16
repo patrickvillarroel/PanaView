@@ -25,6 +25,19 @@ class PromocionesService {
     return resp.data.data!;
   }
 
+  async eliminar(id: string): Promise<void> {
+    await api.delete(`/promociones/${id}`);
+  }
+
+  async actualizar(id: string, payload: Partial<Promocion>): Promise<Promocion> {
+    const resp = await api.put<ApiResponse<Promocion>>(`/promociones/${id}`, payload);
+    return resp.data.data!;
+  }
+
+  async eliminarImagen(promoId: string, imagenId: number): Promise<void> {
+    await api.delete(`/imagenes-promocion/${promoId}/${imagenId}`);
+  }
+
   async redeemById(id: string): Promise<void> {
     await api.post(`/promociones/${id}/redeem`);
   }

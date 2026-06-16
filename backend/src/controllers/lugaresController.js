@@ -1,6 +1,7 @@
 const { Lugar, CategoriaLugar, ImagenLugar, ResenaLugar, sequelize } = require('../models');
 const { success, error } = require('../utils/responseHelper');
 const { calcularDistancia } = require('../utils/geoHelper');
+const { traducirTexto } = require('../utils/traducir');
 const { Op } = require('sequelize');
 
 // Crea o actualiza la imagen de portada de un lugar a partir de una URL.
@@ -194,10 +195,13 @@ async function createLugar(req, res, next) {
       return error(res, 'Faltan campos requeridos', 400);
     }
 
+    const historiaEn = historia ? await traducirTexto(historia) : null;
+
     const lugar = await Lugar.create({
       nombre,
       descripcion,
       historia,
+      historia_en: historiaEn,
       latitud,
       longitud,
       direccion,
@@ -225,10 +229,14 @@ async function updateLugar(req, res, next) {
       return error(res, 'Lugar no encontrado', 404);
     }
 
+    const historiaCambio = historia !== undefined && historia !== lugar.historia;
+    const historiaEn = historiaCambio ? await traducirTexto(historia) : lugar.historia_en;
+
     await lugar.update({
       nombre: nombre ?? lugar.nombre,
       descripcion: descripcion ?? lugar.descripcion,
       historia: historia ?? lugar.historia,
+      historia_en: historiaEn,
       latitud: latitud ?? lugar.latitud,
       longitud: longitud ?? lugar.longitud,
       direccion: direccion ?? lugar.direccion,

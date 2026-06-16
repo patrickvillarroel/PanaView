@@ -2,7 +2,7 @@ import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { LugarFavoritoResumen } from '../types';
+import { LugarFavoritoResumen, NegocioFavoritoResumen } from '../types';
 import { COLORES, BASE_URL } from '../constants/config';
 
 interface FavoritoCardProps {
@@ -16,14 +16,14 @@ export default function FavoritoCard({ lugar, onPress }: FavoritoCardProps) {
     : null;
   const iniciales = lugar.nombre
     .split(' ')
-    .map((parte) => parte[0])
+    .map((parte: string) => parte[0])
     .filter(Boolean)
     .slice(0, 2)
     .join('')
     .toUpperCase();
 
   const categoria = lugar.categoria?.nombre ?? 'Lugar guardado';
-  const ubicacion = lugar.direccion || lugar.provincia || categoria;
+  const ubicacion = lugar.direccion || ('provincia' in lugar ? lugar.provincia : undefined) || categoria;
 
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={onPress}>

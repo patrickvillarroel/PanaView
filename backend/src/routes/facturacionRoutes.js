@@ -15,6 +15,9 @@ router.get('/crm', authMiddleware, ctrl.crmResumen);
 // Admin: marcar ciclo como pagado
 router.post('/:cicloId/pagar', authMiddleware, ctrl.marcarPagado);
 
+// Negocio: crear sesión de pago (Stripe Checkout, modo prueba)
+router.post('/:cicloId/crear-pago', authMiddleware, ctrl.crearPago);
+
 // Admin: configurar comisión y ciclo de un negocio
 router.put('/negocio/:negocioId/config', authMiddleware, ctrl.configurarNegocio);
 

@@ -17,12 +17,12 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../context/AuthContext';
 import { COLORES, BASE_URL } from '../../constants/config';
 import LoadingOverlay from '../../components/LoadingOverlay';
 import FavoritoCard from '../../components/FavoritoCard';
+import MapaSelectorModal from '../../components/MapaSelectorModal';
 import authService from '../../services/authService';
 import negociosService from '../../services/negociosService';
 import promocionesService from '../../services/promocionesService';
@@ -94,8 +94,12 @@ export default function PerfilScreen() {
     whatsapp: '',
     horario: '',
     sitio_web: '',
+    latitud: 9.089204,
+    longitud: -79.4029686,
   });
   const [imagenesSeleccionadas, setImagenesSeleccionadas] = useState<string[]>([]);
+  const [modalMapaVisible, setModalMapaVisible] = useState(false);
+  const [mapaObjetivo, setMapaObjetivo] = useState<'crear' | 'editar'>('crear');
 
   // Estado para negocios del propietario
   const [misNegocios, setMisNegocios] = useState<Negocio[]>([]);
@@ -114,10 +118,13 @@ export default function PerfilScreen() {
     whatsapp: '',
     horario: '',
     sitio_web: '',
+    latitud: 9.089204,
+    longitud: -79.4029686,
   });
 
   // Estado para formulario de promoción
   const [modalPromoVisible, setModalPromoVisible] = useState(false);
+  const [modalComisionVisible, setModalComisionVisible] = useState(false);
   const [promoNegocioId, setPromoNegocioId] = useState('');
   const [promoNegocioNombre, setPromoNegocioNombre] = useState('');
   const [enviandoPromo, setEnviandoPromo] = useState(false);
@@ -308,6 +315,8 @@ export default function PerfilScreen() {
       whatsapp: '',
       horario: '',
       sitio_web: '',
+      latitud: 9.089204,
+      longitud: -79.4029686,
     });
     setImagenesSeleccionadas([]);
     setModalNegocioVisible(true);
@@ -324,8 +333,24 @@ export default function PerfilScreen() {
       whatsapp: negocio.whatsapp ?? '',
       horario: negocio.horario ?? '',
       sitio_web: negocio.sitio_web ?? '',
+      latitud: Number(negocio.latitud) || 9.089204,
+      longitud: Number(negocio.longitud) || -79.4029686,
     });
     setModalEditarVisible(true);
+  }
+
+  function abrirSelectorMapa(objetivo: 'crear' | 'editar') {
+    setMapaObjetivo(objetivo);
+    setModalMapaVisible(true);
+  }
+
+  function handleConfirmarUbicacion(lat: number, lng: number) {
+    if (mapaObjetivo === 'crear') {
+      setFormNegocio((prev) => ({ ...prev, latitud: lat, longitud: lng }));
+    } else {
+      setFormEditar((prev) => ({ ...prev, latitud: lat, longitud: lng }));
+    }
+    setModalMapaVisible(false);
   }
 
   async function handleActualizarNegocio() {
@@ -344,7 +369,9 @@ export default function PerfilScreen() {
       await negociosService.actualizarNegocio(negocioEditando.id, {
         nombre: formEditar.nombre.trim(),
         descripcion: formEditar.descripcion.trim() || undefined,
-        categoria_id: Number(formEditar.categoria_id) as any,
+        categoria: { id: Number(formEditar.categoria_id), nombre: '', icono: '' },
+        latitud: formEditar.latitud,
+        longitud: formEditar.longitud,
         direccion: formEditar.direccion.trim() || undefined,
         telefono: formEditar.telefono.trim() || undefined,
         whatsapp: formEditar.whatsapp.trim() || undefined,
@@ -407,26 +434,12 @@ export default function PerfilScreen() {
 
     setEnviandoNegocio(true);
     try {
-      let latitud = 9.089204;
-      let longitud = -79.4029686;
-
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          const location = await Location.getCurrentPositionAsync({});
-          latitud = location.coords.latitude;
-          longitud = location.coords.longitude;
-        }
-      } catch {
-        // Usar coordenadas por defecto
-      }
-
       const payload: any = {
         nombre: formNegocio.nombre.trim(),
         descripcion: formNegocio.descripcion.trim() || undefined,
         categoria: { id: Number(formNegocio.categoria_id), nombre: '', icono: '' },
-        latitud,
-        longitud,
+        latitud: formNegocio.latitud,
+        longitud: formNegocio.longitud,
         direccion: formNegocio.direccion.trim() || undefined,
         telefono: formNegocio.telefono.trim() || undefined,
         whatsapp: formNegocio.whatsapp.trim() || undefined,
@@ -500,17 +513,27 @@ export default function PerfilScreen() {
     }
   }
 
-  async function handleCrearPromocion() {
+  function validarFormPromo(): boolean {
     if (!formPromo.nombre.trim()) {
       Alert.alert('Error', 'El nombre de la promoción es requerido');
-      return;
+      return false;
     }
 
     if (formPromo.fecha_validez && !/^\d{4}-\d{2}-\d{2}$/.test(formPromo.fecha_validez)) {
       Alert.alert('Fecha inválida', 'El formato debe ser AAAA-MM-DD. Ejemplo: 2026-12-31');
-      return;
+      return false;
     }
 
+    return true;
+  }
+
+  function handleSolicitarCrearPromocion() {
+    if (!validarFormPromo()) return;
+    setModalComisionVisible(true);
+  }
+
+  async function handleCrearPromocion() {
+    setModalComisionVisible(false);
     setEnviandoPromo(true);
     try {
       const payload: any = {
@@ -541,6 +564,10 @@ export default function PerfilScreen() {
   if (cargandoPerfil && !perfilVisible) {
     return <LoadingOverlay visible mensaje="Cargando perfil..." />;
   }
+
+  const negocioComisionPct = Number(
+    misNegocios.find((n) => n.id === promoNegocioId)?.comision_porcentaje ?? 10
+  );
 
   return (
     <>
@@ -727,7 +754,7 @@ export default function PerfilScreen() {
                         </View>
                         <TouchableOpacity
                           style={styles.negocioCardEditar}
-                          onPress={() => abrirEdicionNegocio(negocio)}
+                          onPress={() => abrirFormularioEditar(negocio)}
                           activeOpacity={0.7}
                         >
                           <Ionicons name="create-outline" size={15} color="#fff" />
@@ -919,6 +946,19 @@ export default function PerfilScreen() {
                 onChangeText={(t) => setFormNegocio({ ...formNegocio, direccion: t })}
               />
 
+              <Text style={styles.modalNegocioLabel}>Ubicación en el mapa *</Text>
+              <TouchableOpacity
+                style={styles.botonMapa}
+                onPress={() => abrirSelectorMapa('crear')}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="map-outline" size={18} color={COLORES.primario} />
+                <Text style={styles.botonMapaTexto}>
+                  {formNegocio.latitud.toFixed(5)}, {formNegocio.longitud.toFixed(5)}
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={COLORES.textoBorrado} />
+              </TouchableOpacity>
+
               <View style={styles.modalNegocioFila}>
                 <View style={styles.modalNegocioCampoMitad}>
                   <Text style={styles.modalNegocioLabel}>Teléfono</Text>
@@ -1006,12 +1046,6 @@ export default function PerfilScreen() {
                 )}
               </View>
 
-              <View style={styles.modalNegocioNota}>
-                <Ionicons name="information-circle-outline" size={14} color={COLORES.textoBorrado} />
-                <Text style={styles.modalNegocioNotaTexto}>
-                  Tu ubicación actual se usará como ubicación del negocio. Podrás editarla después.
-                </Text>
-              </View>
             </ScrollView>
 
             <TouchableOpacity
@@ -1093,6 +1127,19 @@ export default function PerfilScreen() {
                 onChangeText={(t) => setFormEditar({ ...formEditar, direccion: t })}
               />
 
+              <Text style={styles.modalNegocioLabel}>Ubicación en el mapa *</Text>
+              <TouchableOpacity
+                style={styles.botonMapa}
+                onPress={() => abrirSelectorMapa('editar')}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="map-outline" size={18} color={COLORES.primario} />
+                <Text style={styles.botonMapaTexto}>
+                  {formEditar.latitud.toFixed(5)}, {formEditar.longitud.toFixed(5)}
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={COLORES.textoBorrado} />
+              </TouchableOpacity>
+
               <View style={styles.modalNegocioFila}>
                 <View style={styles.modalNegocioCampoMitad}>
                   <Text style={styles.modalNegocioLabel}>Teléfono</Text>
@@ -1154,6 +1201,14 @@ export default function PerfilScreen() {
           </View>
         </View>
       </Modal>
+
+      <MapaSelectorModal
+        visible={modalMapaVisible}
+        latitudInicial={mapaObjetivo === 'crear' ? formNegocio.latitud : formEditar.latitud}
+        longitudInicial={mapaObjetivo === 'crear' ? formNegocio.longitud : formEditar.longitud}
+        onConfirmar={handleConfirmarUbicacion}
+        onCerrar={() => setModalMapaVisible(false)}
+      />
 
       <Modal transparent visible={modalPromoVisible} animationType="slide" onRequestClose={() => setModalPromoVisible(false)}>
         <View style={styles.modalOverlay}>
@@ -1254,7 +1309,7 @@ export default function PerfilScreen() {
 
             <TouchableOpacity
               style={[styles.modalNegocioBoton, enviandoPromo && { opacity: 0.7 }]}
-              onPress={handleCrearPromocion}
+              onPress={handleSolicitarCrearPromocion}
               disabled={enviandoPromo}
               activeOpacity={0.85}
             >
@@ -1264,6 +1319,50 @@ export default function PerfilScreen() {
                 <Text style={styles.modalNegocioBotonTexto}>Crear promoción</Text>
               )}
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal transparent visible={modalComisionVisible} animationType="fade" onRequestClose={() => setModalComisionVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.comisionIconoWrap}>
+              <Ionicons name="cash-outline" size={26} color="#B45309" />
+            </View>
+            <Text style={styles.modalTitulo}>Se cobra solo por resultados</Text>
+            <Text style={styles.modalTexto}>
+              No hay suscripción ni costo por publicar esta promoción. Cada vez que un cliente canjee
+              el código QR, se te cobrará una comisión del{' '}
+              <Text style={{ fontWeight: '800', color: COLORES.texto }}>
+                {negocioComisionPct.toFixed(0)}%
+              </Text>{' '}
+              sobre el precio de la promoción.
+              {(() => {
+                const precioNum = parseFloat(formPromo.precio) || 0;
+                if (precioNum <= 0) {
+                  return ' Como esta promoción es gratuita, no generará comisión por canjeo.';
+                }
+                const monto = (precioNum * negocioComisionPct / 100).toFixed(2);
+                return ` Por ejemplo, con un precio de $${precioNum.toFixed(2)} pagarías $${monto} por cada canjeo.`;
+              })()}
+              {' '}El cobro se acumula en tu ciclo de facturación; si no se paga a tiempo, la promoción se desactiva automáticamente.
+            </Text>
+            <View style={styles.modalAcciones}>
+              <TouchableOpacity style={styles.modalBotonSecundario} onPress={() => setModalComisionVisible(false)}>
+                <Text style={styles.modalBotonSecundarioTexto}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBotonPrimario, enviandoPromo && { opacity: 0.7 }]}
+                onPress={handleCrearPromocion}
+                disabled={enviandoPromo}
+              >
+                {enviandoPromo ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.modalBotonPrimarioTexto}>Entendido, crear</Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -1539,6 +1638,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalBotonPrimarioTexto: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  comisionIconoWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#FEF3C7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
 
   negocioSolicitar: {
     flexDirection: 'row',
@@ -1639,6 +1747,23 @@ const styles = StyleSheet.create({
   },
   categoriaChipTextoActivo: {
     color: '#fff',
+  },
+  botonMapa: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#D9E2EC',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#F9FAFB',
+  },
+  botonMapaTexto: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORES.texto,
   },
   modalNegocioNota: {
     flexDirection: 'row',

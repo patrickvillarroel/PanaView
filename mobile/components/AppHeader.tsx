@@ -20,7 +20,6 @@ export default function AppHeader() {
   const { usuario } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const router = useRouter();
 
   const rolImagen = IMAGEN_ROL[usuario?.rol ?? 'turista'] ?? IMAGEN_ROL.turista;
 

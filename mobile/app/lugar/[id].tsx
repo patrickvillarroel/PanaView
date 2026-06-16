@@ -17,6 +17,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import * as Speech from 'expo-speech';
 import { Lugar, Resena } from '../../types';
 import lugaresService from '../../services/lugaresService';
 import favoritosService from '../../services/favoritosService';
@@ -84,10 +86,24 @@ export default function LugarDetailScreen() {
   const [guardando, setGuardando] = useState(false);
   const [esFavorito, setEsFavorito] = useState(false);
   const [cargandoFavorito, setCargandoFavorito] = useState(false);
+  const [hablando, setHablando] = useState(false);
+  const [idiomaAudio, setIdiomaAudio] = useState<'es' | 'en'>('es');
+
+  const audioUrlResuelta = lugar?.audio_url
+    ? (lugar.audio_url.startsWith('http') ? lugar.audio_url : `${BASE_URL}${lugar.audio_url}`)
+    : null;
+  const audioPlayer = useAudioPlayer(audioUrlResuelta);
+  const estadoAudioPlayer = useAudioPlayerStatus(audioPlayer);
 
   useEffect(() => {
     obtenerLugar();
   }, [id]);
+
+  useEffect(() => {
+    return () => {
+      Speech.stop();
+    };
+  }, []);
 
   useEffect(() => {
     if (!id || !isAuthenticated) {
@@ -142,6 +158,46 @@ export default function LugarDetailScreen() {
     }
   };
 
+  const handleToggleAudioGuia = () => {
+    if (idiomaAudio === 'es' && audioUrlResuelta) {
+      if (estadoAudioPlayer.playing) {
+        audioPlayer.pause();
+      } else {
+        Speech.stop();
+        audioPlayer.play();
+      }
+      return;
+    }
+
+    if (hablando) {
+      Speech.stop();
+      setHablando(false);
+      return;
+    }
+
+    const texto =
+      idiomaAudio === 'en'
+        ? (lugar?.historia_en || '').trim()
+        : (lugar?.historia || lugar?.descripcion || '').trim();
+    if (!texto) return;
+
+    Speech.speak(texto, {
+      language: idiomaAudio === 'en' ? 'en-US' : 'es-ES',
+      onDone: () => setHablando(false),
+      onStopped: () => setHablando(false),
+      onError: () => setHablando(false),
+    });
+    setHablando(true);
+  };
+
+  const handleCambiarIdiomaAudio = (idioma: 'es' | 'en') => {
+    if (idioma === idiomaAudio) return;
+    Speech.stop();
+    if (estadoAudioPlayer.playing) audioPlayer.pause();
+    setHablando(false);
+    setIdiomaAudio(idioma);
+  };
+
   const handleAgregarResena = async () => {
     if (!lugar || !comentario.trim()) {
       Alert.alert('Error', 'Por favor escribe un comentario');
@@ -191,6 +247,12 @@ export default function LugarDetailScreen() {
         ? `${Math.round(lugar.distancia_metros)} m`
         : `${(lugar.distancia_metros / 1000).toFixed(1)} km`
       : null;
+
+  const textoAudioGuia = (lugar.historia || lugar.descripcion || '').trim();
+  const tieneAudioGuia = Boolean(audioUrlResuelta) || Boolean(textoAudioGuia);
+  const tieneAudioGuiaEn = Boolean(lugar.historia_en?.trim());
+  const reproduciendoAudioGuia =
+    idiomaAudio === 'es' && audioUrlResuelta ? estadoAudioPlayer.playing : hablando;
 
   const abrirRuta = () => {
     if (!lugar.latitud || !lugar.longitud) return;
@@ -306,18 +368,61 @@ export default function LugarDetailScreen() {
           ) : null}
 
           {/* Audio */}
-          {lugar.audio_url ? (
-            <TouchableOpacity style={styles.botonAudio} activeOpacity={0.85}>
-              <LinearGradient
-                colors={[COLORES.primario, COLORES.secundario]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.botonAudioInner}
+          {tieneAudioGuia ? (
+            <View style={{ marginBottom: ESPACIADO.xl }}>
+              {tieneAudioGuiaEn && (
+                <View style={styles.idiomaSelector}>
+                  <TouchableOpacity
+                    style={[styles.idiomaPill, idiomaAudio === 'es' && styles.idiomaPillActivo]}
+                    onPress={() => handleCambiarIdiomaAudio('es')}
+                  >
+                    <Text
+                      style={[
+                        styles.idiomaPillTexto,
+                        idiomaAudio === 'es' && styles.idiomaPillTextoActivo,
+                      ]}
+                    >
+                      ES
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.idiomaPill, idiomaAudio === 'en' && styles.idiomaPillActivo]}
+                    onPress={() => handleCambiarIdiomaAudio('en')}
+                  >
+                    <Text
+                      style={[
+                        styles.idiomaPillTexto,
+                        idiomaAudio === 'en' && styles.idiomaPillTextoActivo,
+                      ]}
+                    >
+                      EN
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              <TouchableOpacity
+                style={[styles.botonAudio, { marginBottom: 0 }]}
+                activeOpacity={0.85}
+                onPress={handleToggleAudioGuia}
               >
-                <Ionicons name="play-circle-outline" size={22} color="#fff" />
-                <Text style={styles.botonAudioTexto}>Escuchar audioguía</Text>
-              </LinearGradient>
-            </TouchableOpacity>
+                <LinearGradient
+                  colors={[COLORES.primario, COLORES.secundario]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.botonAudioInner}
+                >
+                  <Ionicons
+                    name={reproduciendoAudioGuia ? 'pause-circle-outline' : 'play-circle-outline'}
+                    size={22}
+                    color="#fff"
+                  />
+                  <Text style={styles.botonAudioTexto}>
+                    {reproduciendoAudioGuia ? 'Detener audioguía' : 'Escuchar audioguía'}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
           ) : null}
 
           {/* Galería */}
@@ -643,6 +748,30 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: TAMAÑOS.fontoMedio,
     fontWeight: '700',
+  },
+  idiomaSelector: {
+    flexDirection: 'row',
+    alignSelf: 'flex-start',
+    backgroundColor: COLORES.fondoGris,
+    borderRadius: BORDES.circulo,
+    padding: 3,
+    marginBottom: ESPACIADO.sm,
+  },
+  idiomaPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 5,
+    borderRadius: BORDES.circulo,
+  },
+  idiomaPillActivo: {
+    backgroundColor: COLORES.primario,
+  },
+  idiomaPillTexto: {
+    fontSize: TAMAÑOS.fontoPequeno,
+    fontWeight: '700',
+    color: COLORES.textoBorrado,
+  },
+  idiomaPillTextoActivo: {
+    color: '#fff',
   },
 
   // ── Galería ────────────────────────────────────────────────

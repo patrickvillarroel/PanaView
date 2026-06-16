@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
-import { Store, ShieldCheck } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ImageOff, Store, ShieldCheck, Upload, X } from 'lucide-react';
 import Modal from '../components/Modal';
+import MapPicker from '../components/MapPicker';
 import { useToast } from '../components/ToastContext';
 import { negociosService, type NegocioPayload } from '../services/negociosService';
 import { getApiError } from '../api/client';
@@ -21,12 +22,13 @@ interface FormState {
   descripcion: string;
   telefono: string;
   whatsapp: string;
-  horario: string;
+  horario_dias: string;
+  horario_apertura: string;
+  horario_cierre: string;
   sitio_web: string;
   direccion: string;
   latitud: string;
   longitud: string;
-  imagen_portada: string;
   verificado: boolean;
 }
 
@@ -37,12 +39,13 @@ function emptyForm(categorias: Categoria[]): FormState {
     descripcion: '',
     telefono: '',
     whatsapp: '',
-    horario: '',
+    horario_dias: '',
+    horario_apertura: '',
+    horario_cierre: '',
     sitio_web: '',
     direccion: '',
     latitud: '',
     longitud: '',
-    imagen_portada: '',
     verificado: true,
   };
 }
@@ -50,6 +53,43 @@ function emptyForm(categorias: Categoria[]): FormState {
 // Panamanian phone: 7-8 digits, optional +507 prefix and formatting chars
 const PHONE_RE = /^[\+\d][\d\s\-\(\)]{5,14}$/;
 const URL_RE = /^https?:\/\/.+\..+/;
+const NOMINATIM = 'https://nominatim.openstreetmap.org/reverse';
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+
+/** Convierte "HH:mm" (24h) a "h:mm AM/PM". */
+function to12h(hhmm: string): string {
+  if (!hhmm) return '';
+  const [hStr, mStr] = hhmm.split(':');
+  let h = parseInt(hStr, 10);
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  h = h % 12;
+  if (h === 0) h = 12;
+  return `${h}:${mStr} ${suffix}`;
+}
+
+/** Intenta separar un horario guardado como texto en días + horas 24h, para precargar el picker. */
+function parseHorario(horario: string | null | undefined): {
+  dias: string;
+  apertura: string;
+  cierre: string;
+} {
+  const value = (horario ?? '').trim();
+  if (!value) return { dias: '', apertura: '', cierre: '' };
+
+  const match = value.match(
+    /^(.*):\s*(\d{1,2}):(\d{2})\s*([AaPp])\.?[Mm]\.?\s*-\s*(\d{1,2}):(\d{2})\s*([AaPp])\.?[Mm]\.?$/
+  );
+  if (!match) return { dias: value, apertura: '', cierre: '' };
+
+  const [, dias, h1, m1, ap1, h2, m2, ap2] = match;
+  const to24 = (h: string, m: string, ap: string) => {
+    let hour = parseInt(h, 10) % 12;
+    if (ap.toLowerCase() === 'p') hour += 12;
+    return `${String(hour).padStart(2, '0')}:${m}`;
+  };
+  return { dias: dias.trim(), apertura: to24(h1, m1, ap1), cierre: to24(h2, m2, ap2) };
+}
 
 export default function NegocioFormModal({
   open,
@@ -62,28 +102,45 @@ export default function NegocioFormModal({
   const [form, setForm] = useState<FormState>(emptyForm(categorias));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [geocoding, setGeocoding] = useState(false);
+
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const blobUrl = useRef<string | null>(null);
 
   const editing = !!negocio;
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      if (blobUrl.current) {
+        URL.revokeObjectURL(blobUrl.current);
+        blobUrl.current = null;
+      }
+      return;
+    }
     setErrors({});
+    setImageFile(null);
     if (negocio) {
+      const { dias, apertura, cierre } = parseHorario(negocio.horario);
+      setImagePreview(portadaUrl(negocio.imagenes) ?? null);
       setForm({
         nombre: negocio.nombre ?? '',
         categoria_id: String(negocio.categoria_id ?? negocio.categoria?.id ?? 1),
         descripcion: negocio.descripcion ?? '',
         telefono: negocio.telefono ?? '',
         whatsapp: negocio.whatsapp ?? '',
-        horario: negocio.horario ?? '',
+        horario_dias: dias,
+        horario_apertura: apertura,
+        horario_cierre: cierre,
         sitio_web: negocio.sitio_web ?? '',
         direccion: negocio.direccion ?? '',
         latitud: String(negocio.latitud ?? ''),
         longitud: String(negocio.longitud ?? ''),
-        imagen_portada: portadaUrl(negocio.imagenes) ?? '',
         verificado: negocio.verificado ?? false,
       });
     } else {
+      setImagePreview(null);
       setForm(emptyForm(categorias));
     }
   }, [open, negocio, categorias]);
@@ -91,6 +148,65 @@ export default function NegocioFormModal({
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
     if (errors[key as string]) setErrors((e) => ({ ...e, [key]: '' }));
+  }
+
+  async function handleMapChange(lat: number, lng: number) {
+    setForm((f) => ({ ...f, latitud: lat.toFixed(6), longitud: lng.toFixed(6) }));
+    if (errors.latitud || errors.longitud)
+      setErrors((e) => ({ ...e, latitud: '', longitud: '' }));
+
+    setGeocoding(true);
+    try {
+      const res = await fetch(
+        `${NOMINATIM}?format=json&lat=${lat}&lon=${lng}&accept-language=es`,
+        { headers: { 'User-Agent': 'PanaView/1.0' } },
+      );
+      const data = await res.json();
+      const addr: Record<string, string> = data.address ?? {};
+      const road = addr.road ?? addr.pedestrian ?? addr.street ?? addr.amenity ?? '';
+      const suburb = addr.suburb ?? addr.neighbourhood ?? addr.quarter ?? '';
+      const dir = [road, suburb].filter(Boolean).join(', ');
+      setForm((f) => ({
+        ...f,
+        latitud: lat.toFixed(6),
+        longitud: lng.toFixed(6),
+        direccion: dir || f.direccion,
+      }));
+    } catch {
+      // geocoding failure is non-fatal
+    } finally {
+      setGeocoding(false);
+    }
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    e.target.value = '';
+    if (!file) return;
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      toast.error('Formato no válido. Usa JPEG, PNG o WebP');
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      toast.error('La imagen no puede superar 5 MB');
+      return;
+    }
+
+    if (blobUrl.current) URL.revokeObjectURL(blobUrl.current);
+    const url = URL.createObjectURL(file);
+    blobUrl.current = url;
+    setImageFile(file);
+    setImagePreview(url);
+  }
+
+  function clearImage() {
+    if (blobUrl.current) {
+      URL.revokeObjectURL(blobUrl.current);
+      blobUrl.current = null;
+    }
+    setImageFile(null);
+    setImagePreview(null);
   }
 
   function validate(): boolean {
@@ -112,6 +228,12 @@ export default function NegocioFormModal({
     if (wa && !PHONE_RE.test(wa))
       e.whatsapp = 'Número inválido (ej: 6000-0000 o +507 6000-0000)';
 
+    if (Boolean(form.horario_apertura) !== Boolean(form.horario_cierre)) {
+      const msg = 'Define tanto la hora de apertura como la de cierre';
+      e.horario_apertura = msg;
+      e.horario_cierre = msg;
+    }
+
     const web = form.sitio_web.trim();
     if (web && !URL_RE.test(web))
       e.sitio_web = 'Debe ser una URL válida (https://...)';
@@ -121,12 +243,20 @@ export default function NegocioFormModal({
     const lat = parseFloat(form.latitud);
     const lng = parseFloat(form.longitud);
     if (form.latitud === '' || isNaN(lat) || lat < -90 || lat > 90)
-      e.latitud = 'Latitud inválida (-90 a 90)';
+      e.latitud = 'Selecciona una ubicación en el mapa';
     if (form.longitud === '' || isNaN(lng) || lng < -180 || lng > 180)
-      e.longitud = 'Longitud inválida (-180 a 180)';
+      e.longitud = 'Selecciona una ubicación en el mapa';
 
     setErrors(e);
     return Object.keys(e).length === 0;
+  }
+
+  function buildHorario(): string | undefined {
+    const dias = form.horario_dias.trim();
+    const tieneHoras = form.horario_apertura && form.horario_cierre;
+    const rango = tieneHoras ? `${to12h(form.horario_apertura)} - ${to12h(form.horario_cierre)}` : '';
+    if (dias && rango) return `${dias}: ${rango}`;
+    return rango || dias || undefined;
   }
 
   async function handleSubmit() {
@@ -139,26 +269,37 @@ export default function NegocioFormModal({
       descripcion: form.descripcion.trim() || undefined,
       telefono: form.telefono.trim() || undefined,
       whatsapp: form.whatsapp.trim() || undefined,
-      horario: form.horario.trim() || undefined,
+      horario: buildHorario(),
       sitio_web: form.sitio_web.trim() || undefined,
       direccion: form.direccion.trim() || undefined,
       latitud: parseFloat(form.latitud),
       longitud: parseFloat(form.longitud),
-      imagen_portada: form.imagen_portada.trim() || undefined,
       verificado: form.verificado,
     };
 
     try {
+      let savedId: string;
       if (editing && negocio) {
         await negociosService.update(negocio.id, payload);
+        savedId = negocio.id;
         if ((negocio.verificado ?? false) !== form.verificado) {
           await negociosService.setVerificado(negocio.id, form.verificado);
         }
         toast.success('Negocio actualizado correctamente');
       } else {
-        await negociosService.create(payload);
+        const created = await negociosService.create(payload);
+        savedId = created.id;
         toast.success('Negocio creado correctamente');
       }
+
+      if (imageFile) {
+        try {
+          await negociosService.uploadImage(savedId, imageFile);
+        } catch {
+          toast.error('El negocio se guardó, pero no se pudo subir la imagen');
+        }
+      }
+
       onSaved();
       onClose();
     } catch (err) {
@@ -177,7 +318,7 @@ export default function NegocioFormModal({
       title={editing ? 'Editar negocio' : 'Nuevo negocio'}
       subtitle={editing ? negocio?.nombre : 'Registra un negocio en la plataforma'}
       icon={<Store size={20} />}
-      width={640}
+      width={720}
       footer={
         <>
           {errorCount > 0 && (
@@ -283,26 +424,104 @@ export default function NegocioFormModal({
           </div>
         </div>
 
-        {/* Horario + Sitio web */}
+        {/* Horario */}
+        <div>
+          <label className="label">Horario de atención</label>
+          <div className="help" style={{ marginBottom: 8 }}>
+            Días de atención y horas de apertura/cierre (opcional).
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr 1fr', gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 4 }}>Días</div>
+              <input
+                className="input"
+                value={form.horario_dias}
+                onChange={(e) => set('horario_dias', e.target.value)}
+                placeholder="Ej. Lun - Vie"
+              />
+            </div>
+            <div>
+              <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 4 }}>Abre</div>
+              <input
+                type="time"
+                className={`input ${errors.horario_apertura ? 'invalid' : ''}`}
+                value={form.horario_apertura}
+                onChange={(e) => set('horario_apertura', e.target.value)}
+              />
+            </div>
+            <div>
+              <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 4 }}>Cierra</div>
+              <input
+                type="time"
+                className={`input ${errors.horario_cierre ? 'invalid' : ''}`}
+                value={form.horario_cierre}
+                onChange={(e) => set('horario_cierre', e.target.value)}
+              />
+            </div>
+          </div>
+          {(errors.horario_apertura || errors.horario_cierre) && (
+            <div className="field-error" style={{ marginTop: 6 }}>
+              {errors.horario_apertura || errors.horario_cierre}
+            </div>
+          )}
+        </div>
+
+        {/* Sitio web */}
+        <div>
+          <label className="label">Sitio web</label>
+          <input
+            className={`input ${errors.sitio_web ? 'invalid' : ''}`}
+            value={form.sitio_web}
+            onChange={(e) => set('sitio_web', e.target.value)}
+            placeholder="https://..."
+          />
+          {errors.sitio_web && <div className="field-error">{errors.sitio_web}</div>}
+        </div>
+
+        {/* Mapa de ubicación */}
+        <div>
+          <label className="label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            Ubicación en el mapa *
+            {geocoding && <span className="spinner" style={{ width: 14, height: 14 }} />}
+          </label>
+          <div className="help" style={{ marginBottom: 8 }}>
+            Haz clic en el mapa para marcar el negocio. Puedes arrastrar el marcador para ajustar.
+          </div>
+          {(errors.latitud || errors.longitud) && (
+            <div className="field-error" style={{ marginBottom: 8 }}>
+              {errors.latitud || errors.longitud}
+            </div>
+          )}
+          {open && (
+            <MapPicker
+              lat={form.latitud ? parseFloat(form.latitud) : null}
+              lng={form.longitud ? parseFloat(form.longitud) : null}
+              onChange={handleMapChange}
+            />
+          )}
+        </div>
+
+        {/* Lat / Lng — solo lectura, rellenados por el mapa */}
         <div className="grid-2">
           <div>
-            <label className="label">Horario</label>
+            <label className="label">Latitud</label>
             <input
               className="input"
-              value={form.horario}
-              onChange={(e) => set('horario', e.target.value)}
-              placeholder="Lun-Dom 9:00-18:00"
+              value={form.latitud}
+              readOnly
+              placeholder="Haz clic en el mapa"
+              style={{ background: 'var(--surface-2)', color: 'var(--muted)' }}
             />
           </div>
           <div>
-            <label className="label">Sitio web</label>
+            <label className="label">Longitud</label>
             <input
-              className={`input ${errors.sitio_web ? 'invalid' : ''}`}
-              value={form.sitio_web}
-              onChange={(e) => set('sitio_web', e.target.value)}
-              placeholder="https://..."
+              className="input"
+              value={form.longitud}
+              readOnly
+              placeholder="Haz clic en el mapa"
+              style={{ background: 'var(--surface-2)', color: 'var(--muted)' }}
             />
-            {errors.sitio_web && <div className="field-error">{errors.sitio_web}</div>}
           </div>
         </div>
 
@@ -313,47 +532,48 @@ export default function NegocioFormModal({
             className={`input ${errors.direccion ? 'invalid' : ''}`}
             value={form.direccion}
             onChange={(e) => set('direccion', e.target.value)}
-            placeholder="Dirección o referencia del negocio"
+            placeholder="Auto-detectada del mapa, o escribe una referencia"
           />
           {errors.direccion && <div className="field-error">{errors.direccion}</div>}
         </div>
 
-        {/* Latitud + Longitud */}
-        <div className="grid-2">
-          <div>
-            <label className="label">Latitud *</label>
-            <input
-              className={`input ${errors.latitud ? 'invalid' : ''}`}
-              value={form.latitud}
-              onChange={(e) => set('latitud', e.target.value)}
-              placeholder="9.0901"
-              inputMode="decimal"
-            />
-            {errors.latitud && <div className="field-error">{errors.latitud}</div>}
-          </div>
-          <div>
-            <label className="label">Longitud *</label>
-            <input
-              className={`input ${errors.longitud ? 'invalid' : ''}`}
-              value={form.longitud}
-              onChange={(e) => set('longitud', e.target.value)}
-              placeholder="-79.4035"
-              inputMode="decimal"
-            />
-            {errors.longitud && <div className="field-error">{errors.longitud}</div>}
-          </div>
-        </div>
-
         {/* Imagen de portada */}
         <div>
-          <label className="label">URL de imagen de portada</label>
+          <label className="label">Imagen de portada</label>
           <input
-            className="input"
-            value={form.imagen_portada}
-            onChange={(e) => set('imagen_portada', e.target.value)}
-            placeholder="/uploads/negocios/imagen.jpg o https://..."
+            ref={fileRef}
+            type="file"
+            accept="image/jpeg,image/jpg,image/png,image/webp"
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
           />
-          <div className="help">Ruta relativa del backend o URL completa.</div>
+          {imagePreview ? (
+            <div className="img-picker img-picker--preview">
+              <img src={imagePreview} alt="Portada" className="img-picker-img" />
+              <div className="img-picker-overlay">
+                <button
+                  type="button"
+                  className="img-picker-change"
+                  onClick={() => fileRef.current?.click()}
+                >
+                  <Upload size={14} /> Cambiar
+                </button>
+                <button type="button" className="img-picker-remove" onClick={clearImage}>
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="img-picker img-picker--empty"
+              onClick={() => fileRef.current?.click()}
+            >
+              <ImageOff size={28} className="img-picker-empty-icon" />
+              <span>Haz clic para subir una imagen</span>
+              <span className="img-picker-hint">JPEG, PNG o WebP · máx. 5 MB</span>
+            </button>
+          )}
         </div>
 
         {/* Verificado */}

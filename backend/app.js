@@ -17,9 +17,18 @@ const resenasNegociosRoutes = require('./src/routes/resenasNegociosRoutes');
 const imagenesPromocionRoutes = require('./src/routes/imagenesPromocionRoutes');
 const imagenesLugarRoutes = require('./src/routes/imagenesLugarRoutes');
 const facturacionRoutes = require('./src/routes/facturacionRoutes');
+const facturacionController = require('./src/controllers/facturacionController');
 const errorMiddleware = require('./src/middlewares/errorMiddleware');
 
 const app = express();
+
+// Webhook de Stripe: necesita el body crudo para verificar la firma,
+// por eso se registra ANTES de express.json().
+app.post(
+  '/api/facturacion/webhook/stripe',
+  express.raw({ type: 'application/json' }),
+  facturacionController.stripeWebhook
+);
 
 // Middleware
 app.use(express.json());

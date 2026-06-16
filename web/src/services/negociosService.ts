@@ -48,4 +48,13 @@ export const negociosService = {
   async remove(id: string): Promise<void> {
     await api.delete(`/negocios/${id}`);
   },
+
+  async uploadImage(negocioId: string, file: File): Promise<void> {
+    const body = new FormData();
+    body.append('imagen', file);
+    body.append('es_portada', 'true');
+    await api.post(`/imagenes-negocio/${negocioId}`, body, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
 };

@@ -78,6 +78,11 @@ class FacturacionService {
     return r.data.data!.ciclo;
   }
 
+  async crearPago(cicloId: string): Promise<{ url: string }> {
+    const r = await api.post<ApiResponse<{ url: string }>>(`/facturacion/${cicloId}/crear-pago`);
+    return r.data.data!;
+  }
+
   async crmResumen(): Promise<ResumenCRM> {
     const r = await api.get<ApiResponse<ResumenCRM>>('/facturacion/crm');
     return r.data.data!;

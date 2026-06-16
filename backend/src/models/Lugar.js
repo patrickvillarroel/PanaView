@@ -27,6 +27,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    historia_en: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
     latitud: {
       type: DataTypes.DECIMAL(10, 7),
       allowNull: false,

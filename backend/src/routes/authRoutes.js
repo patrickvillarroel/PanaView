@@ -22,7 +22,7 @@ const authMiddleware = require('../middlewares/authMiddleware');
  *         application/json:
  *           schema:
  *             type: object
- *     required: [nombre, email, password, rol_id, terminos_aceptados]
+ *             required: [nombre, email, password, rol_id, terminos_aceptados]
  *             properties:
  *               nombre:
  *                 type: string

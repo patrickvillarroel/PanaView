@@ -1,8 +1,34 @@
 const { CicloFacturacion, Negocio, Promocion, CompraPromocion, Usuario } = require('../models');
 const { Op } = require('sequelize');
 const { success, error } = require('../utils/responseHelper');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 // ─── Helper interno ───────────────────────────────────────────────────────────
+
+// Marca un ciclo como pagado y reactiva las promociones del negocio si no
+// quedan otros ciclos pendientes. La usan tanto el endpoint manual de admin
+// como el webhook de Stripe.
+async function marcarCicloComoPagado(cicloId) {
+  const ciclo = await CicloFacturacion.findByPk(cicloId);
+  if (!ciclo) throw new Error('Ciclo no encontrado');
+  if (ciclo.estado === 'pagado') return ciclo;
+
+  await ciclo.update({ estado: 'pagado', pagado_en: new Date() });
+
+  const otrasPendientes = await CicloFacturacion.count({
+    where: {
+      negocio_id: ciclo.negocio_id,
+      estado: { [Op.in]: ['pendiente_pago', 'vencido'] },
+      id: { [Op.ne]: cicloId },
+    },
+  });
+
+  if (otrasPendientes === 0) {
+    await Promocion.update({ activo: true }, { where: { negocio_id: ciclo.negocio_id } });
+  }
+
+  return ciclo;
+}
 
 async function aplicarVencimientos(negocioId = null) {
   const hoy = new Date();
@@ -123,28 +149,84 @@ exports.marcarPagado = async (req, res, next) => {
     if (!ciclo) return error(res, 'Ciclo no encontrado', 404);
     if (ciclo.estado === 'pagado') return error(res, 'Este ciclo ya fue pagado', 400);
 
-    await ciclo.update({ estado: 'pagado', pagado_en: new Date() });
-
-    // Reactivar promociones si no hay otros ciclos sin pagar
-    const otrasPendientes = await CicloFacturacion.count({
-      where: {
-        negocio_id: ciclo.negocio_id,
-        estado: { [Op.in]: ['pendiente_pago', 'vencido'] },
-        id: { [Op.ne]: cicloId },
-      },
-    });
-
-    if (otrasPendientes === 0) {
-      await Promocion.update(
-        { activo: true },
-        { where: { negocio_id: ciclo.negocio_id } }
-      );
-    }
-
-    return success(res, { message: 'Ciclo marcado como pagado', ciclo });
+    const actualizado = await marcarCicloComoPagado(cicloId);
+    return success(res, { message: 'Ciclo marcado como pagado', ciclo: actualizado });
   } catch (err) {
     next(err);
   }
+};
+
+// ─── POST /api/facturacion/:cicloId/crear-pago ────────────────────────────────
+// Negocio: crea una sesión de Stripe Checkout (modo prueba) para pagar el ciclo
+
+exports.crearPago = async (req, res, next) => {
+  try {
+    const { cicloId } = req.params;
+    const ciclo = await CicloFacturacion.findByPk(cicloId, {
+      include: [{ model: Negocio, as: 'negocio', attributes: ['id', 'nombre'] }],
+    });
+    if (!ciclo) return error(res, 'Ciclo no encontrado', 404);
+    if (ciclo.estado === 'pagado') return error(res, 'Este ciclo ya fue pagado', 400);
+    if (ciclo.estado === 'activo') return error(res, 'Este ciclo todavía está en curso', 400);
+
+    const monto = parseFloat(ciclo.total_comisiones);
+    if (!monto || monto <= 0) return error(res, 'No hay un monto pendiente para este ciclo', 400);
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: `Comisión PanaView — ${ciclo.negocio?.nombre ?? 'Negocio'}`,
+              description: `Ciclo del ${ciclo.fecha_inicio} al ${ciclo.fecha_fin}`,
+            },
+            unit_amount: Math.round(monto * 100),
+          },
+          quantity: 1,
+        },
+      ],
+      metadata: { ciclo_id: ciclo.id },
+      success_url: process.env.STRIPE_SUCCESS_URL,
+      cancel_url: process.env.STRIPE_CANCEL_URL,
+    });
+
+    return success(res, { url: session.url });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── POST /api/facturacion/webhook/stripe ──────────────────────────────────────
+// Stripe: confirma el pago y marca el ciclo como pagado automáticamente.
+// Requiere el body crudo (configurado en app.js antes de express.json()).
+
+exports.stripeWebhook = async (req, res) => {
+  const firma = req.headers['stripe-signature'];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, firma, process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    console.error('Webhook de Stripe — firma inválida:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    const cicloId = session.metadata?.ciclo_id;
+    if (cicloId) {
+      try {
+        await marcarCicloComoPagado(cicloId);
+      } catch (err) {
+        console.error('Error al marcar ciclo pagado desde webhook de Stripe:', err.message);
+      }
+    }
+  }
+
+  return res.json({ received: true });
 };
 
 // ─── POST /api/facturacion/check-vencimientos ─────────────────────────────────
