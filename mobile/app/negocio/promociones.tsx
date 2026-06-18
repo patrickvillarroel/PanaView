@@ -19,10 +19,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import PromocionesService from '../../services/promocionesService';
+import negociosService from '../../services/negociosService';
 import { Promocion } from '../../types';
 import LoadingOverlay from '../../components/LoadingOverlay';
 import AppHeader from '../../components/AppHeader';
 import SimpleBottomNav from '../../components/SimpleBottomNav';
+import { useAuth } from '../../context/AuthContext';
 import { COLORES, ESPACIADO, TAMAÑOS, BORDES, BASE_URL } from '../../constants/config';
 
 const { width: ANCHO } = Dimensions.get('window');
@@ -31,9 +33,11 @@ const ALTO_HERO = 200;
 export default function PromocionesScreen() {
   const { id: negocioId } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { usuario } = useAuth();
   const [promos, setPromos] = useState<Promocion[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [esPropietario, setEsPropietario] = useState(false);
 
   const [modalEditarVisible, setModalEditarVisible] = useState(false);
   const [promoEditando, setPromoEditando] = useState<Promocion | null>(null);
@@ -48,7 +52,25 @@ export default function PromocionesScreen() {
   useEffect(() => {
     if (!negocioId) return;
     cargarPromos();
+    verificarPropietario();
   }, [negocioId]);
+
+  const verificarPropietario = async () => {
+    if (!usuario) {
+      setEsPropietario(false);
+      return;
+    }
+    if (usuario.rol === 'admin') {
+      setEsPropietario(true);
+      return;
+    }
+    try {
+      const negocio = await negociosService.getNegocioById(negocioId as string);
+      setEsPropietario(negocio.propietario_id === usuario.id);
+    } catch {
+      setEsPropietario(false);
+    }
+  };
 
   const cargarPromos = async () => {
     setCargando(true);
@@ -258,20 +280,22 @@ export default function PromocionesScreen() {
                   </View>
                 )}
 
-                <View style={styles.botoneraSuperior}>
-                  <TouchableOpacity
-                    style={styles.botonIcono}
-                    onPress={() => abrirEditar(item)}
-                  >
-                    <Ionicons name="create-outline" size={16} color="#fff" />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.botonIcono, styles.botonIconoEliminar]}
-                    onPress={() => eliminarPromo(item)}
-                  >
-                    <Ionicons name="trash-outline" size={16} color="#fff" />
-                  </TouchableOpacity>
-                </View>
+                {esPropietario && (
+                  <View style={styles.botoneraSuperior}>
+                    <TouchableOpacity
+                      style={styles.botonIcono}
+                      onPress={() => abrirEditar(item)}
+                    >
+                      <Ionicons name="create-outline" size={16} color="#fff" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.botonIcono, styles.botonIconoEliminar]}
+                      onPress={() => eliminarPromo(item)}
+                    >
+                      <Ionicons name="trash-outline" size={16} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                )}
 
                 <LinearGradient
                   colors={['transparent', 'rgba(0,0,0,0.75)']}

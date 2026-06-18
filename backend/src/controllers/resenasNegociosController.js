@@ -25,7 +25,7 @@ async function getResenasPorNegocio(req, res, next) {
   }
 }
 
-// Crear reseña de un negocio (sin auth por ahora — dev mode)
+// Crear reseña de un negocio (requiere autenticación)
 async function createResena(req, res, next) {
   try {
     const { negocio_id, calificacion, comentario } = req.body;
@@ -44,12 +44,11 @@ async function createResena(req, res, next) {
       return error(res, 'Negocio no encontrado', 404);
     }
 
-    // En dev mode: buscar cualquier usuario (sin auth)
-    const usuario = await Usuario.findOne();
-    if (!usuario) {
-      return error(res, 'No hay usuarios disponibles', 500);
+    const usuarioId = req.user.id;
+
+    if (negocio.propietario_id === usuarioId) {
+      return error(res, 'No puedes dejar una reseña en tu propio negocio', 403);
     }
-    const usuarioId = req.user?.id || usuario.id;
 
     // Verificar si el usuario ya tiene una reseña en este negocio
     const resenaExistente = await ResenaNegocio.findOne({

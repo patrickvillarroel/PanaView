@@ -23,6 +23,7 @@ import resenasNegociosService from '../../services/resenasNegociosService';
 import LoadingOverlay from '../../components/LoadingOverlay';
 import AppHeader from '../../components/AppHeader';
 import SimpleBottomNav from '../../components/SimpleBottomNav';
+import { useAuth } from '../../context/AuthContext';
 import { COLORES, ESPACIADO, TAMAÑOS, BORDES, BASE_URL } from '../../constants/config';
 
 const { width: ANCHO } = Dimensions.get('window');
@@ -40,6 +41,7 @@ function SeccionTexto({ titulo, texto }: { titulo: string; texto: string }) {
 export default function NegocioDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { usuario } = useAuth();
   const [negocio, setNegocio] = useState<Negocio | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -170,6 +172,7 @@ export default function NegocioDetailScreen() {
 
   const rating = negocio.calificacion_promedio ?? 0;
   const totalResenas = negocio.total_resenas ?? 0;
+  const esPropietario = !!usuario && negocio.propietario_id === usuario.id;
 
   return (
     <View style={{ flex: 1 }}>
@@ -315,23 +318,25 @@ export default function NegocioDetailScreen() {
         <View style={styles.seccion}>
           <View style={styles.resenasHeader}>
             <Text style={styles.seccionTitulo}>Reseñas ({resenas.length})</Text>
-            <TouchableOpacity
-              style={styles.botonEscribirResena}
-              onPress={() => setMostrarFormulario(!mostrarFormulario)}
-              activeOpacity={0.8}
-            >
-              <Ionicons
-                name={mostrarFormulario ? 'close' : 'create-outline'}
-                size={16}
-                color={COLORES.primario}
-              />
-              <Text style={styles.botonEscribirResenaTexto}>
-                {mostrarFormulario ? 'Cancelar' : 'Escribir reseña'}
-              </Text>
-            </TouchableOpacity>
+            {!esPropietario && (
+              <TouchableOpacity
+                style={styles.botonEscribirResena}
+                onPress={() => setMostrarFormulario(!mostrarFormulario)}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name={mostrarFormulario ? 'close' : 'create-outline'}
+                  size={16}
+                  color={COLORES.primario}
+                />
+                <Text style={styles.botonEscribirResenaTexto}>
+                  {mostrarFormulario ? 'Cancelar' : 'Escribir reseña'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
 
-          {mostrarFormulario && (
+          {!esPropietario && mostrarFormulario && (
             <View style={styles.formularioResena}>
               <Text style={styles.formularioLabel}>Tu calificación</Text>
               <View style={styles.estrellasRow}>
