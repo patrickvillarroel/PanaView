@@ -1,4 +1,4 @@
-# PanaRoute - Aplicación Móvil de Turismo Inteligente
+# PanaView - Aplicación Móvil de Turismo Inteligente
 
 ## 📱 Descripción del Proyecto
 
@@ -409,4 +409,4 @@ Este proyecto está bajo licencia ISC.
 
 ---
 
-**¡Disfruta descubriendo Panamá con PanaRoute! 🇵🇦**
+**¡Disfruta descubriendo Panamá con PanaView! 🇵🇦**
