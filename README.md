@@ -2,7 +2,7 @@
 
 ## 📱 Descripción del Proyecto
 
-**PanaRoute** es una aplicación móvil full-stack de turismo inteligente basada en geolocalización para la República de Panamá. Permite a los usuarios descubrir lugares turísticos y negocios cercanos en tiempo real, ver reseñas, calificaciones y acceder a información detallada sobre cada sitio.
+**PanaView** es una aplicación móvil full-stack de turismo inteligente basada en geolocalización para la República de Panamá. Permite a los usuarios descubrir lugares turísticos y negocios cercanos en tiempo real, ver reseñas, calificaciones y acceder a información detallada sobre cada sitio.
 
 ### Características Principales
 
